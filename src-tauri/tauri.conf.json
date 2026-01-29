@@ -13,16 +13,35 @@
         "macOSPrivateApi": true,
         "windows": [
             {
-                "title": "Natively",
+                "label": "launcher",
+                "title": "Natively Launcher",
                 "width": 1200,
                 "height": 800,
-                "transparent": true,
+                "center": true,
                 "decorations": true,
-                "hiddenTitle": true,
                 "titleBarStyle": "Overlay",
+                "hiddenTitle": true,
+                "transparent": true,
+                "windowEffects": {
+                    "effects": [
+                        "underWindowBackground"
+                    ],
+                    "state": "active"
+                },
+                "visible": true,
+                "url": "index.html?window=launcher"
+            },
+            {
+                "label": "overlay",
+                "title": "Natively Overlay",
+                "width": 600,
+                "height": 600,
+                "decorations": false,
+                "transparent": true,
                 "alwaysOnTop": true,
-                "resizable": true,
-                "visible": true
+                "visible": false,
+                "skipTaskbar": true,
+                "url": "index.html?window=overlay"
             }
         ],
         "security": {

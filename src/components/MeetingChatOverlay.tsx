@@ -125,7 +125,7 @@ const MeetingChatOverlay: React.FC<MeetingChatOverlayProps> = ({
     onClose,
     meetingContext,
     initialQuery = '',
-    onNewQuery
+    onNewQuery: _onNewQuery
 }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [chatState, setChatState] = useState<ChatState>('idle');

@@ -73,7 +73,6 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({ onEndMeeting }) =
     const [attachedContext, setAttachedContext] = useState<{ path: string, preview: string } | null>(null);
 
     // Settings State with Persistence
-    const [isUndetectable, setIsUndetectable] = useState(true);
     const [hideChatHidesWidget, setHideChatHidesWidget] = useState(() => {
         const stored = localStorage.getItem('natively_hideChatHidesWidget');
         return stored ? stored === 'true' : true;
@@ -81,9 +80,8 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({ onEndMeeting }) =
 
     // Persist Settings
     useEffect(() => {
-        localStorage.setItem('natively_undetectable', String(isUndetectable));
         localStorage.setItem('natively_hideChatHidesWidget', String(hideChatHidesWidget));
-    }, [isUndetectable, hideChatHidesWidget]);
+    }, [hideChatHidesWidget]);
 
     // Auto-resize Window
     useLayoutEffect(() => {

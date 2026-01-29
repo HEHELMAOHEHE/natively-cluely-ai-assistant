@@ -3,63 +3,127 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { exit } from '@tauri-apps/plugin-process';
 
-// Stub logger
-const logStub = (name: string) => console.log(`[Stub] ${name} called`);
+const currentWindow = getCurrentWindow();
 
+// This object mimics your old electronAPI exactly
 export const tauriAPI = {
-  // --- Window Management ---
+  // --- 1. Window Management ---
   updateContentDimensions: async (dimensions: { width: number; height: number }) => {
-    await getCurrentWindow().setSize(new (await import('@tauri-apps/api/window')).LogicalSize(dimensions.width, dimensions.height));
+    // Resize the current window (whether overlay or settings)
+    await currentWindow.setSize(new (await import('@tauri-apps/api/window')).LogicalSize(dimensions.width, dimensions.height));
   },
-  onToggleExpand: (callback: () => void) => { logStub('onToggleExpand'); return () => { }; },
 
-  // Screenshots (Stubbed for now)
+  setWindowMode: async (mode: 'launcher' | 'overlay') => {
+    // Call Rust to handle the swap animation
+    return invoke('set_window_mode', { mode });
+  },
+
+  // --- 2. Meeting Lifecycle ---
+  startMeeting: async () => {
+    console.log("Tauri: Requesting Start Meeting...");
+    try {
+      // Start audio/AI services in Rust
+      const res = await invoke('start_meeting');
+      // Force UI switch
+      await invoke('set_window_mode', { mode: 'overlay' });
+      return res as { success: boolean; error?: string };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: String(e) };
+    }
+  },
+
+  endMeeting: async () => {
+    console.log("Tauri: Ending Meeting...");
+    try {
+      await invoke('stop_meeting');
+      await invoke('set_window_mode', { mode: 'launcher' });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
+  },
+
+  // --- 3. Native Audio Events (The "Invisible" Logic) ---
+  onNativeAudioTranscript: (callback: any) => {
+    // Listen for 'transcript' event emitted from Rust
+    const unlisten = listen('transcript', (event: any) => {
+      callback(event.payload);
+    });
+    return () => { unlisten.then(f => f()); };
+  },
+
+  onNativeAudioSuggestion: (callback: any) => {
+    const unlisten = listen('suggestion', (event: any) => {
+      callback(event.payload);
+    });
+    return () => { unlisten.then(f => f()); };
+  },
+
+  // --- 4. System & Utils ---
+  quitApp: async () => exit(0),
+
+  // Pass-through for generic commands not explicitly typed
+  invoke: async (cmd: string, args?: any) => invoke(cmd, args),
+
+  // --- Stubs to prevent crashes (Features to migrate later) ---
   getScreenshots: async () => [],
-  deleteScreenshot: async (path: string) => ({ success: true }),
-  onScreenshotTaken: (callback: any) => () => { },
-  onScreenshotAttached: (callback: any) => () => { },
-  takeScreenshot: async () => { logStub('takeScreenshot'); },
+  getRecentMeetings: async () => [],
+  getThemeMode: async () => ({ mode: 'dark', resolved: 'dark' }),
+  onThemeChanged: () => () => { },
+  getNativeAudioStatus: async () => ({ connected: true }),
+  onNativeAudioConnected: (cb: any) => { cb(); return () => { }; }, // Fake connection for UI feedback
+  onNativeAudioDisconnected: (cb: any) => () => { },
+  onSuggestionProcessingStart: (cb: any) => () => { },
+  onSuggestionGenerated: (cb: any) => () => { },
+  onSuggestionError: (cb: any) => () => { },
 
-  // Debug/Solutions (Stubbed)
-  onSolutionsReady: (cb: any) => () => { },
-  onResetView: (cb: any) => () => { },
-  onSolutionStart: (cb: any) => () => { },
-  onDebugStart: (cb: any) => () => { },
-  onDebugSuccess: (cb: any) => () => { },
-  onSolutionError: (cb: any) => () => { },
-  onProcessingNoScreenshots: (cb: any) => () => { },
-  onProblemExtracted: (cb: any) => () => { },
-  onSolutionSuccess: (cb: any) => () => { },
-  onUnauthorized: (cb: any) => () => { },
-  onDebugError: (cb: any) => () => { },
-
-  // Window Movement (Stubbed or verify if needed)
+  // Additional Stubs to ensure no regressions from previous big file
+  onToggleExpand: () => () => { },
+  deleteScreenshot: async () => ({ success: true }),
+  onScreenshotTaken: () => () => { },
+  onScreenshotAttached: () => () => { },
+  takeScreenshot: async () => { },
+  onSolutionsReady: () => () => { },
+  onResetView: () => () => { },
+  onSolutionStart: () => () => { },
+  onDebugStart: () => () => { },
+  onDebugSuccess: () => () => { },
+  onSolutionError: () => () => { },
+  onProcessingNoScreenshots: () => () => { },
+  onProblemExtracted: () => () => { },
+  onSolutionSuccess: () => () => { },
+  onUnauthorized: () => () => { },
+  onDebugError: () => () => { },
   moveWindowLeft: async () => { },
   moveWindowRight: async () => { },
   moveWindowUp: async () => { },
   moveWindowDown: async () => { },
   toggleWindow: async () => { },
-  showWindow: async () => getCurrentWindow().show(),
-  hideWindow: async () => getCurrentWindow().hide(),
-
-  // App Lifecycle
-  quitApp: async () => { await exit(0); },
+  showWindow: async () => currentWindow.show(),
+  hideWindow: async () => currentWindow.hide(),
   setUndetectable: async (state: boolean) => {
-    await getCurrentWindow().setIgnoreCursorEvents(state);
-    return { success: true };
+    // Invoke backend command targetting the overlay window explicitly
+    try {
+      await invoke('set_ignore_cursor_events', { ignore: state });
+      localStorage.setItem('natively_undetectable', String(state));
+      return { success: true };
+    } catch (e) {
+      console.error("Failed to set undetectable:", e);
+      return { success: false, error: String(e) };
+    }
   },
-  getUndetectable: async () => false,
-  setOpenAtLogin: async (open: boolean) => ({ success: true }), // Needs autostart plugin
+  getUndetectable: async () => {
+    const stored = localStorage.getItem('natively_undetectable');
+    return stored === 'true';
+  },
+  setOpenAtLogin: async () => ({ success: true }),
   getOpenAtLogin: async () => false,
-
-  // Settings Window
-  onSettingsVisibilityChange: (cb: any) => () => { },
-  toggleSettingsWindow: async (coords?: any) => { },
+  onSettingsVisibilityChange: () => () => { },
+  toggleSettingsWindow: async () => { },
   closeSettingsWindow: async () => { },
   toggleAdvancedSettings: async () => { },
   closeAdvancedSettings: async () => { },
-
-  // LLM Logic
   getCurrentLlmConfig: async () => ({ provider: 'gemini' as const, model: 'flash', isOllama: false }),
   getAvailableOllamaModels: async () => [],
   switchToOllama: async () => ({ success: false, error: 'Not implemented' }),
@@ -67,102 +131,99 @@ export const tauriAPI = {
   testLlmConnection: async () => ({ success: true }),
   selectServiceAccount: async () => ({ success: false, error: 'Not implemented' }),
 
-  // --- Native Audio Service (Core Logic) ---
-  onNativeAudioTranscript: (callback: any) => {
-    // TODO: Map to Tauri Event
-    return listen<any>('transcript', (event) => callback(event.payload)).then(unsub => unsub).catch(console.error) as any;
+  // --- INTELLIGENCE COMMANDS ---
+  generateWhatToSay: async () => {
+    try {
+      const answer = await invoke('what_should_i_say');
+      return { answer, question: "Inferred", error: null };
+    } catch (e) {
+      return { answer: null, error: String(e) };
+    }
   },
-  // Mapping other events similarly...
-  onNativeAudioSuggestion: (callback: any) => {
-    listen<any>('suggestion', e => callback(e.payload));
-    return () => { }; // Sync return needed by React, but listen is async. We might need a wrapper.
-  },
-  onNativeAudioConnected: (cb: any) => () => { },
-  onNativeAudioDisconnected: (cb: any) => () => { },
-  onSuggestionGenerated: (cb: any) => () => { },
-  onSuggestionProcessingStart: (cb: any) => () => { },
-  onSuggestionError: (cb: any) => () => { },
-  generateSuggestion: async (ctx: string, q: string) => invoke('what_should_i_say', { context: ctx }),
-  getNativeAudioStatus: async () => ({ connected: true }),
 
-  // Intelligence Mode
+  generateRecap: async () => {
+    try {
+      const summary = await invoke('generate_recap');
+      return { summary };
+    } catch (e) {
+      console.error(e);
+      return { summary: null };
+    }
+  },
+
+  generateFollowUpQuestions: async () => {
+    try {
+      const questions = await invoke('generate_follow_up_questions');
+      return { questions };
+    } catch (e) {
+      return { questions: null };
+    }
+  },
+
+  generateSuggestion: async (context: string) => invoke('what_should_i_say', { context }),
   generateAssist: async () => invoke('what_should_i_say'),
-  generateWhatToSay: async (q?: string) => invoke('what_should_i_say'),
   generateFollowUp: async () => ({ refined: "Refined text", intent: "follow-up" }),
-  generateFollowUpQuestions: async () => ({ questions: "Q1, Q2" }),
-  generateRecap: async () => ({ summary: "Summary" }),
   submitManualQuestion: async (q: string) => ({ answer: "Answer", question: q }),
   getIntelligenceContext: async () => ({ context: "", lastAssistantMessage: null, activeMode: "auto" }),
   resetIntelligence: async () => ({ success: true }),
 
-  // Meeting Lifecycle - REAL
-  startMeeting: async () => invoke('start_meeting'),
-  endMeeting: async () => invoke('stop_meeting'),
-  getRecentMeetings: async () => invoke('get_recent_meetings').then((res: any) => res || []),
-  getMeetingDetails: async (id: string) => ({}),
-  updateMeetingTitle: async () => true,
-  updateMeetingSummary: async () => true,
-  deleteMeeting: async () => true,
-  setWindowMode: async () => { },
+  onIntelligenceAssistUpdate: () => () => { },
+  onIntelligenceSuggestedAnswerToken: () => () => { },
+  onIntelligenceSuggestedAnswer: () => () => { },
+  onIntelligenceRefinedAnswerToken: () => () => { },
+  onIntelligenceRefinedAnswer: () => () => { },
+  onIntelligenceFollowUpQuestionsUpdate: () => () => { },
+  onIntelligenceFollowUpQuestionsToken: () => () => { },
+  onIntelligenceRecap: () => () => { },
+  onIntelligenceRecapToken: () => () => { },
+  onIntelligenceManualStarted: () => () => { },
+  onIntelligenceManualResult: () => () => { },
+  onIntelligenceModeChanged: () => () => { },
+  onIntelligenceError: () => () => { },
 
-  // Events - Intelligence
-  onIntelligenceAssistUpdate: (cb: any) => () => { },
-  onIntelligenceSuggestedAnswerToken: (cb: any) => () => { },
-  onIntelligenceSuggestedAnswer: (cb: any) => () => { },
-  onIntelligenceRefinedAnswerToken: (cb: any) => () => { },
-  onIntelligenceRefinedAnswer: (cb: any) => () => { },
-  onIntelligenceFollowUpQuestionsUpdate: (cb: any) => () => { },
-  onIntelligenceFollowUpQuestionsToken: (cb: any) => () => { },
-  onIntelligenceRecap: (cb: any) => () => { },
-  onIntelligenceRecapToken: (cb: any) => () => { },
-  onIntelligenceManualStarted: (cb: any) => () => { },
-  onIntelligenceManualResult: (cb: any) => () => { },
-  onIntelligenceModeChanged: (cb: any) => () => { },
-  onIntelligenceError: (cb: any) => () => { },
+  // --- CALENDAR COMMAND ---
+  calendarConnect: async () => {
+    try {
+      return await invoke('calendar_connect');
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
+  },
 
-  // Streaming
-  streamGeminiChat: async () => { },
-  onGeminiStreamToken: (cb: any) => () => { },
-  onGeminiStreamDone: (cb: any) => () => { },
-  onGeminiStreamError: (cb: any) => () => { },
-
-  onMeetingsUpdated: (cb: any) => () => { },
-
-  // Theme
-  getThemeMode: async () => ({ mode: 'dark' as const, resolved: 'dark' as const }),
-  setThemeMode: async () => { },
-  onThemeChanged: (cb: any) => () => { },
-
-  // Calendar
-  calendarConnect: async () => ({ success: false }),
   calendarDisconnect: async () => ({ success: true }),
   getCalendarStatus: async () => ({ connected: false }),
   getUpcomingEvents: async () => [],
   calendarRefresh: async () => ({ success: true }),
 
-  // Generic Invoke
-  invoke: async (channel: string, ...args: any[]) => {
-    // Direct pass-through for anything else
-    return invoke(channel, { args });
-  },
+  // Meeting Management Stubs
+  getMeetingDetails: async () => ({}),
+  updateMeetingTitle: async () => true,
+  updateMeetingSummary: async () => true,
+  deleteMeeting: async () => true,
 
-  // Auto-Update
-  onUpdateAvailable: (cb: any) => () => { },
-  onUpdateDownloaded: (cb: any) => () => { },
-  onUpdateChecking: (cb: any) => () => { },
-  onUpdateNotAvailable: (cb: any) => () => { },
-  onUpdateError: (cb: any) => () => { },
-  restartAndInstall: async () => { },
-  checkForUpdates: async () => { },
-
-  // RAG
-  ragQueryMeeting: async (id: string, query: string) => invoke('rag_query', { query }),
+  // RAG Stubs
+  ragQueryMeeting: async (_id: string, query: string) => invoke('rag_query', { query }),
   ragQueryGlobal: async (query: string) => invoke('rag_query', { query }),
   ragCancelQuery: async () => ({ success: true }),
   ragIsMeetingProcessed: async () => true,
   ragGetQueueStatus: async () => ({ pending: 0, processing: 0, completed: 0, failed: 0 }),
   ragRetryEmbeddings: async () => ({ success: true }),
-  onRAGStreamChunk: (cb: any) => () => { },
-  onRAGStreamComplete: (cb: any) => () => { },
-  onRAGStreamError: (cb: any) => () => { },
+  onRAGStreamChunk: () => () => { },
+  onRAGStreamComplete: () => () => { },
+  onRAGStreamError: () => () => { },
+
+  // Stream Stubs
+  streamGeminiChat: async () => { },
+  onGeminiStreamToken: () => () => { },
+  onGeminiStreamDone: () => () => { },
+  onGeminiStreamError: () => () => { },
+  onMeetingsUpdated: () => () => { },
+  setThemeMode: async () => { },
+  onUpdateAvailable: () => () => { },
+  onUpdateDownloaded: () => () => { },
+  onUpdateChecking: () => () => { },
+  onUpdateNotAvailable: () => () => { },
+  onUpdateError: () => () => { },
+  restartAndInstall: async () => { },
+  checkForUpdates: async () => { },
 };

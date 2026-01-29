@@ -122,6 +122,13 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
             window.electronAPI.invoke('seed-demo').catch(err => console.error("Failed to seed demo:", err));
         }
 
+        // Load initial undetectable state
+        if (window.electronAPI && window.electronAPI.getUndetectable) {
+            window.electronAPI.getUndetectable().then(isUndetectable => {
+                setIsDetectable(!isUndetectable); // Inverted logic: Detectable = !Undetectable
+            }).catch(console.error);
+        }
+
         fetchMeetings();
         fetchEvents();
 

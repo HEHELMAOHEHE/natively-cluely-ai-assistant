@@ -2,7 +2,11 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { MessageSquare, Link, Camera, Zap, Heart } from 'lucide-react';
 
 const SettingsPopup = () => {
-    const [isUndetectable, setIsUndetectable] = useState(true);
+    const [isUndetectable, setIsUndetectable] = useState(() => {
+        // Initialize from storage (default true)
+        const stored = localStorage.getItem('natively_undetectable');
+        return stored ? stored === 'true' : true;
+    });
     const [useGeminiPro, setUseGeminiPro] = useState(() => {
         return localStorage.getItem('natively_model_preference') === 'pro';
     });

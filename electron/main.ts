@@ -1216,56 +1216,49 @@ export class AppState {
     }
 
     // --- STEALTH MODE LOGIC ---
-    // If True (Stealth Mode): Hide Dock, Hide Tray (or standard 'stealth' behavior)
-    // If False (Visible Mode): Show Dock, Show Tray
+    // If True (Stealth Mode): Set Activation Policy 'accessory' (Hide Dock, Hide Tray)
+    // If False (Visible Mode): Set Activation Policy 'regular' (Show Dock, Show Tray)
 
     if (process.platform === 'darwin') {
-      const activeWindow = this.windowHelper.getMainWindow();
+      const targetWindow =
+        // Priority: Settings > Main Window > Launcher
+        (settingsWin && settingsWin.isVisible() ? settingsWin : null) || mainWindow || launcher;
 
-      // Determine the truly active window to restore focus to
-      // Priority: Settings > Main Window
-      const settingsWin = this.settingsWindowHelper.getSettingsWindow();
-      let targetFocusWindow = activeWindow;
-
-      if (settingsWin && !settingsWin.isDestroyed() && settingsWin.isVisible()) {
-        targetFocusWindow = settingsWin;
-      }
-
-      // Temporarily ignore blur to prevent settings from closing during dock hide/show
-      if (targetFocusWindow && (targetFocusWindow === settingsWin)) {
+      // Temporarily ignore blur to prevent settings from closing during transition
+      if (targetWindow && (targetWindow === settingsWin)) {
         this.settingsWindowHelper.setIgnoreBlur(true);
       }
 
-      if (state) {
-        app.dock.hide();
-        this.hideTray(); // User said: "Tray Hidden in 'stealth'"
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        // 1️⃣ Temporarily lock window above everything
+        targetWindow.setAlwaysOnTop(true, 'screen-saver');
+        targetWindow.moveTop();
 
-        // Apply the selected disguise when entering undetectable mode
-        this._applyDisguise(this.disguiseMode);
-
-        // Critical Fix: Force focus back to the active window to prevent it from being backgrounded
-        // When Dock icon is hidden, macOS treats app as "accessory", potentially losing focus
-        if (targetFocusWindow && !targetFocusWindow.isDestroyed() && targetFocusWindow.isVisible()) {
-          // Attempt immediate focus to prevent background flash
-          targetFocusWindow.show();
-          targetFocusWindow.focus();
+        if (state) {
+          app.setActivationPolicy('accessory');
+          this.hideTray();
+          this._applyDisguise(this.disguiseMode);
+        } else {
+          app.setActivationPolicy('regular');
+          this.showTray();
+          this._applyDisguise('none');
         }
-      } else {
-        app.dock.show();
-        this.showTray();
 
-        // Revert to "Natively" appearance when exiting undetectable mode
-        // But do NOT reset this.disguiseMode so it's remembered for next time
-        this._applyDisguise('none');
-
-        // Restore focus when coming back to foreground/dock mode
-        if (targetFocusWindow && !targetFocusWindow.isDestroyed() && targetFocusWindow.isVisible()) {
-          targetFocusWindow.focus();
-        }
+        // 2️⃣ Restore stacking cleanly
+        setTimeout(() => {
+          if (!targetWindow.isDestroyed()) {
+            if (targetWindow === settingsWin || targetWindow === this.windowHelper.getOverlayWindow()) {
+              targetWindow.setAlwaysOnTop(true, 'floating');
+            } else {
+              targetWindow.setAlwaysOnTop(false);
+            }
+            targetWindow.focus();
+          }
+        }, 250);
       }
 
       // Re-enable blur handling after the transition logic has settled
-      if (targetFocusWindow && (targetFocusWindow === settingsWin)) {
+      if (targetWindow && (targetWindow === settingsWin)) {
         setTimeout(() => {
           this.settingsWindowHelper.setIgnoreBlur(false);
         }, 500);
@@ -1448,19 +1441,14 @@ async function initializeApp() {
     appState.createWindow()
 
     // Apply initial stealth state based on isUndetectable setting
-    // Default isUndetectable = false, so dock is visible and tray is shown
-    if (appState.getUndetectable()) {
-      // Stealth mode: hide dock and tray
-      if (process.platform === 'darwin') {
-        app.dock.hide();
-      }
-      // Tray is hidden by default when in stealth
-    } else {
-      // Normal mode: show dock and tray
+    if (process.platform === 'darwin') {
+      app.setActivationPolicy(
+        appState.getUndetectable() ? 'accessory' : 'regular'
+      );
+    }
+
+    if (!appState.getUndetectable()) {
       appState.showTray();
-      if (process.platform === 'darwin') {
-        app.dock.show();
-      }
     }
     // Register global shortcuts using ShortcutsHelper
     appState.shortcutsHelper.registerGlobalShortcuts()
@@ -1507,7 +1495,7 @@ async function initializeApp() {
     console.log("App activated")
     if (process.platform === 'darwin') {
       if (!appState.getUndetectable()) {
-        app.dock.show();
+        app.setActivationPolicy('regular');
       }
     }
     if (appState.getMainWindow() === null) {

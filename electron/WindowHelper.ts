@@ -349,9 +349,9 @@ export class WindowHelper {
       this.launcherWindow.focus();
       this.isWindowVisible = true;
       if (process.platform === 'darwin') {
-        // Only show dock if NOT in stealth mode
+        // Only show dock (via policy) if NOT in stealth mode
         if (!this.appState.getUndetectable()) {
-          app.dock.show();
+          app.setActivationPolicy('regular');
         }
       }
     }

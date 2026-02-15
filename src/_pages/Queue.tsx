@@ -9,7 +9,7 @@ import {
   ToastMessage
 } from "../components/ui/toast"
 import QueueCommands from "../components/Queue/QueueCommands"
-import ModelSelector from "../components/ui/ModelSelector"
+import { ModelSelector } from "../components/ui/ModelSelector"
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -39,7 +39,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
   const chatInputRef = useRef<HTMLInputElement>(null)
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [currentModel, setCurrentModel] = useState<{ provider: string; model: string }>({ provider: "gemini", model: "gemini-3-flash-preview" })
+  const [currentModel, setCurrentModel] = useState<string>('gemini-3-flash-preview')
 
   const barRef = useRef<HTMLDivElement>(null)
 
@@ -57,6 +57,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
     },
     {
       staleTime: Infinity,
+      // @ts-ignore
       cacheTime: Infinity,
       refetchOnWindowFocus: true,
       refetchOnMount: true
@@ -99,17 +100,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
     cleanups.push(window.electronAPI.onGeminiStreamToken((token) => {
       setChatMessages(prev => {
         const lastMsg = prev[prev.length - 1];
-        if (lastMsg && lastMsg.role === 'gemini' && lastMsg.text.endsWith("...")) {
-          // Trying to identify the streaming message. 
-          // Since we don't have an ID, we assume the last 'gemini' message that is "..." (placeholder) or active is the one.
-          // Actually, simpler: when starting stream, we add a message.
-          // But wait, we don't have `isStreaming` flag in `Queue` state.
-          // We should add it or just append to the last message if it's from gemini.
-
-          // If the last message is from gemini, append to it.
-          // If the last message is user, we haven't created the gemini message yet?
-          // In handleChatSend we create it.
-
+        if (lastMsg && lastMsg.role === 'gemini') {
           const updated = [...prev];
           updated[prev.length - 1] = {
             ...lastMsg,
@@ -117,8 +108,6 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
           };
           return updated;
         }
-        // If last was user, this is the first token, so we might need to add a message?
-        // Better to add a placeholder in handleChatSend.
         return prev;
       });
     }));
@@ -158,17 +147,34 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
     }
   }
 
-  // Load current model configuration on mount
+  // Load persisted default model on mount
   useEffect(() => {
-    const loadCurrentModel = async () => {
+    const loadDefaultModel = async () => {
       try {
-        const config = await window.electronAPI.getCurrentLlmConfig();
-        setCurrentModel({ provider: config.provider, model: config.model });
+        // @ts-ignore
+        const result = await window.electronAPI.invoke('get-default-model');
+        if (result && result.model) {
+          setCurrentModel(result.model);
+          // Set runtime model to the default
+          // @ts-ignore
+          window.electronAPI.invoke('set-model', result.model).catch(() => { });
+        }
       } catch (error) {
-        console.error('Error loading current model config:', error);
+        console.error('Error loading default model:', error);
       }
     };
-    loadCurrentModel();
+    loadDefaultModel();
+  }, []);
+
+  // Listen for default model changes from Settings
+  useEffect(() => {
+    // @ts-ignore
+    if (!window.electronAPI?.onModelChanged) return;
+    // @ts-ignore
+    const unsubscribe = window.electronAPI.onModelChanged((modelId: string) => {
+      setCurrentModel(prev => prev === modelId ? prev : modelId);
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -217,12 +223,12 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
       resizeObserver.disconnect()
       cleanupFunctions.forEach((cleanup) => cleanup())
     }
-  }, [isTooltipVisible, tooltipHeight])
+  }, [isTooltipVisible, tooltipHeight, refetch, setView])
 
   // Seamless screenshot-to-LLM flow
   useEffect(() => {
     // Listen for screenshot taken event
-    const unsubscribe = window.electronAPI.onScreenshotTaken(async (data) => {
+    const unsubscribe = window.electronAPI.onScreenshotTaken(async (data: any) => {
       // Refetch screenshots to update the queue
       await refetch();
       // Show loading in chat
@@ -232,7 +238,6 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
         const latest = data?.path || (Array.isArray(data) && data.length > 0 && data[data.length - 1]?.path);
         if (latest) {
           // Call the LLM to process the screenshot
-          // Use streaming for this too!
           setChatMessages((msgs) => [...msgs, { role: "user", text: "📷 Analyzing screenshot..." }]);
           setChatMessages((msgs) => [...msgs, { role: "gemini", text: "..." }]);
 
@@ -261,13 +266,13 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
     setIsSettingsOpen(!isSettingsOpen)
   }
 
-  const handleModelChange = (provider: "ollama" | "gemini", model: string) => {
-    setCurrentModel({ provider, model })
-    // Update chat messages to reflect the model change
-    const modelName = provider === "ollama" ? model : "Gemini 3 Flash"
+  const handleModelChange = (modelId: string) => {
+    setCurrentModel(modelId)
+    // @ts-ignore
+    window.electronAPI.invoke('set-model', modelId).catch(console.error);
     setChatMessages((msgs) => [...msgs, {
       role: "gemini",
-      text: `🔄 Switched to ${provider === "ollama" ? "🏠" : "☁️"} ${modelName}. Ready for your questions!`
+      text: `🔄 Switched to ${modelId}. Ready for your questions!`
     }])
   }
 
@@ -293,7 +298,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
             <ToastTitle>{toastMessage.title}</ToastTitle>
             <ToastDescription>{toastMessage.description}</ToastDescription>
           </Toast>
-          <div className="w-fit">
+          <div className="w-fit" ref={contentRef}>
             <QueueCommands
               screenshots={screenshots}
               onTooltipVisibilityChange={handleTooltipVisibilityChange}
@@ -304,17 +309,17 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
           {/* Conditional Settings Interface */}
           {isSettingsOpen && (
             <div className="mt-4 w-full mx-auto">
-              <ModelSelector onModelChange={handleModelChange} onChatOpen={() => setIsChatOpen(true)} />
+              <ModelSelector currentModel={currentModel} onSelectModel={handleModelChange} />
             </div>
           )}
 
           {/* Conditional Chat Interface */}
           {isChatOpen && (
             <div className="mt-4 w-full mx-auto liquid-glass chat-container p-4 flex flex-col">
-              <div className="flex-1 overflow-y-auto mb-3 p-3 rounded-lg bg-white/10 backdrop-blur-md max-h-64 min-h-[120px] glass-content border border-white/20 shadow-lg">
+              <div className="flex-1 overflow-y-auto mb-3 p-3 rounded-lg bg-white/10 backdrop-blur-md max-h-64 min-h-[120px] glass-content border border-white/20 shadow-lg custom-scrollbar">
                 {chatMessages.length === 0 ? (
                   <div className="text-sm text-gray-600 text-center mt-8">
-                    💬 Chat with {currentModel.provider === "ollama" ? "🏠" : "☁️"} {currentModel.model}
+                    💬 Chat with {currentModel}
                     <br />
                     <span className="text-xs text-gray-500">Take a screenshot (Cmd+H) for automatic analysis</span>
                     <br />
@@ -337,8 +342,11 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
                           remarkPlugins={[remarkGfm, remarkMath]}
                           rehypePlugins={[rehypeKatex]}
                           components={{
+                            // @ts-ignore
                             p: ({ node, ...props }: any) => <p className="mb-2 last:mb-0 whitespace-pre-wrap" {...props} />,
+                            // @ts-ignore
                             a: ({ node, ...props }: any) => <a className="underline hover:opacity-80" target="_blank" rel="noopener noreferrer" {...props} />,
+                            // @ts-ignore
                             code: ({ node, ...props }: any) => <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono" {...props} />,
                           }}
                         >
@@ -355,7 +363,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
                         <span className="animate-pulse text-gray-400">●</span>
                         <span className="animate-pulse animation-delay-200 text-gray-400">●</span>
                         <span className="animate-pulse animation-delay-400 text-gray-400">●</span>
-                        <span className="ml-2">{currentModel.model} is replying...</span>
+                        <span className="ml-2">{currentModel} is replying...</span>
                       </span>
                     </div>
                   </div>

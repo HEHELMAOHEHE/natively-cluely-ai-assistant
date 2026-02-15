@@ -1,12 +1,13 @@
+
 // electron/rag/EmbeddingPipeline.ts
 // Post-meeting embedding generation with queue-based retry logic
-// Uses Gemini text-embedding-004 (768 dimensions)
+// Uses Gemini embedding models
 
 import { GoogleGenAI } from '@google/genai';
 import Database from 'better-sqlite3';
-import { VectorStore, StoredChunk } from './VectorStore';
+import { VectorStore } from './VectorStore';
 
-const EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODEL = 'models/gemini-embedding-001';
 const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE_MS = 2000;
 
@@ -34,7 +35,7 @@ export class EmbeddingPipeline {
     }
 
     /**
-     * Initialize with API key
+     * Initialize with API key 
      */
     initialize(apiKey: string): void {
         if (!apiKey) {
@@ -42,7 +43,7 @@ export class EmbeddingPipeline {
             return;
         }
         this.client = new GoogleGenAI({ apiKey });
-        console.log('[EmbeddingPipeline] Initialized with Gemini embedding model');
+        console.log('[EmbeddingPipeline] Initialized with Gemini embedding model: ' + EMBEDDING_MODEL);
     }
 
     /**
@@ -115,7 +116,7 @@ export class EmbeddingPipeline {
                 `).get(MAX_RETRIES) as any;
 
                 if (!pending) {
-                    console.log('[EmbeddingPipeline] Queue empty');
+                    // console.log('[EmbeddingPipeline] Queue empty');
                     break;
                 }
 
@@ -166,16 +167,17 @@ export class EmbeddingPipeline {
             throw new Error('Embedding client not initialized');
         }
 
+        // Updated for @google/genai (v0.12.0+)
         const result = await this.client.models.embedContent({
             model: EMBEDDING_MODEL,
             contents: [{ parts: [{ text }] }]
         });
 
-        if (!result.embeddings || !result.embeddings[0]) {
+        if (!result.embeddings?.[0]?.values) {
             throw new Error('No embedding returned from API');
         }
 
-        return result.embeddings[0].values as number[];
+        return result.embeddings[0].values;
     }
 
     /**

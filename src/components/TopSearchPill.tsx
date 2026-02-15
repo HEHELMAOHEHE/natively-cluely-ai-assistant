@@ -44,9 +44,7 @@ function fuzzyMatch(text: string, query: string): boolean {
     // Simple contains match for now
     if (normalizedText.includes(normalizedQuery)) return true;
 
-    // Fuzzy character match
     // Fuzzy match removed for stricter accuracy
-    // Only return true if exact substring match (already checked above)
     return false;
 }
 
@@ -252,7 +250,7 @@ const TopSearchPill: React.FC<TopSearchPillProps> = ({
             {/* Search Pill Container */}
             <div
                 ref={containerRef}
-                className={`no-drag z-40 ${className || ''}`}
+                className={`absolute left-1/2 -translate-x-1/2 top-[7px] no-drag z-40 ${className || ''}`}
             >
                 <div className="relative">
                     <motion.div

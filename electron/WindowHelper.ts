@@ -1,16 +1,18 @@
 
 import { BrowserWindow, screen, app } from "electron"
-import type { AppState } from "./main"
+import { AppState } from "./main"
 import path from "node:path"
 
 const isEnvDev = process.env.NODE_ENV === "development"
+const isPackaged = app.isPackaged;
+const inAppBundle = process.execPath.includes('.app/') || process.execPath.includes('.app\\');
 
-// Lazy evaluation to avoid accessing app before Electron is ready
-const getIsPackaged = () => app.isPackaged;
-const getInAppBundle = () => process.execPath.includes('.app/') || process.execPath.includes('.app\\');
-const getIsDev = () => isEnvDev && !getIsPackaged();
+console.log(`[WindowHelper] isEnvDev: ${isEnvDev}, isPackaged: ${isPackaged}, inAppBundle: ${inAppBundle}`);
 
-const getStartUrl = () => getIsDev()
+// Force production mode if running as packaged app or inside app bundle
+const isDev = isEnvDev && !isPackaged;
+
+const startUrl = isDev
   ? "http://localhost:5180"
   : `file://${path.join(__dirname, "../dist/index.html")}`
 
@@ -128,11 +130,11 @@ export class WindowHelper {
         contextIsolation: true,
         preload: path.join(__dirname, "preload.js"),
         scrollBounce: true,
-        webSecurity: !getIsDev(), // DEBUG: Disable web security only in dev
+        webSecurity: !isDev, // DEBUG: Disable web security only in dev
       },
       show: false, // DEBUG: Force show -> Fixed white screen, now relies on ready-to-show
-      titleBarStyle: 'hidden', // macOS: hidden title bar
-      frame: false, // Windows/Linux: Frameless
+      titleBarStyle: 'hidden', // macOS title bar
+      frame: false, // Windows/Linux frameless
       trafficLightPosition: { x: 14, y: 14 },
       vibrancy: 'under-window',
       visualEffectState: 'followWindow',
@@ -143,13 +145,13 @@ export class WindowHelper {
       resizable: true,
       movable: true,
       center: true,
-      icon: getIsPackaged()
+      icon: isPackaged
         ? path.join(process.resourcesPath, "natively.icns")
         : path.resolve(__dirname, "../assets/natively.icns")
     }
 
     console.log(`[WindowHelper] Icon Path: ${launcherSettings.icon}`);
-    console.log(`[WindowHelper] Start URL: ${getStartUrl()}`);
+    console.log(`[WindowHelper] Start URL: ${startUrl}`);
 
     try {
       this.launcherWindow = new BrowserWindow(launcherSettings)
@@ -161,7 +163,7 @@ export class WindowHelper {
 
     this.launcherWindow.setContentProtection(false)
 
-    this.launcherWindow.loadURL(`${getStartUrl()}?window=launcher`)
+    this.launcherWindow.loadURL(`${startUrl}?window=launcher`)
       .then(() => console.log('[WindowHelper] loadURL success'))
       .catch((e) => { console.error("[WindowHelper] Failed to load URL:", e) })
 
@@ -169,7 +171,7 @@ export class WindowHelper {
       console.error(`[WindowHelper] did-fail-load: ${errorCode} ${errorDescription}`);
     });
 
-    if (getIsDev()) {
+    if (isDev) {
       this.launcherWindow.webContents.openDevTools({ mode: 'detach' }); // DEBUG: Open DevTools
     }
 
@@ -206,7 +208,7 @@ export class WindowHelper {
       this.overlayWindow.setAlwaysOnTop(true, "floating")
     }
 
-    this.overlayWindow.loadURL(`${getStartUrl()}?window=overlay`).catch(() => { })
+    this.overlayWindow.loadURL(`${startUrl}?window=overlay`).catch(() => { })
 
     // --- 3. Startup Sequence ---
     this.launcherWindow.once('ready-to-show', () => {
@@ -302,6 +304,10 @@ export class WindowHelper {
     }
   }
 
+  public toggleOverlayWindow(): void {
+    this.toggleMainWindow();
+  }
+
   public centerAndShowWindow(): void {
     // Default to launcher
     this.switchToLauncher();
@@ -324,7 +330,7 @@ export class WindowHelper {
       const y = Math.floor((workArea.height - 600) / 2)
 
       // Only reset if not already positioned? existing logic used to remember but let's reset for predictability
-      this.overlayWindow.setBounds({ x, y, width: 600, height: 600 });
+      this.overlayWindow.setBounds({ x, y, width: 600, height: 216 });
 
       this.overlayWindow.show();
       this.overlayWindow.focus();
@@ -349,7 +355,8 @@ export class WindowHelper {
       this.isWindowVisible = true;
       if (process.platform === 'darwin') {
         // Only show dock if NOT in stealth mode
-        if (!this.appState.getUndetectable()) {
+        // @ts-ignore - access appState
+        if (!this.appState.getUndetectable?.()) {
           app.dock.show();
         }
       }
@@ -386,4 +393,11 @@ export class WindowHelper {
   public moveWindowLeft(): void { this.moveActiveWindow(-this.step, 0) }
   public moveWindowDown(): void { this.moveActiveWindow(0, this.step) }
   public moveWindowUp(): void { this.moveActiveWindow(0, -this.step) }
+
+  public restoreFocusToMainWindow(): void {
+    const win = this.getMainWindow();
+    if (win && !win.isDestroyed()) {
+      win.focus();
+    }
+  }
 }

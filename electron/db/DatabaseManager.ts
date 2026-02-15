@@ -58,6 +58,22 @@ export class DatabaseManager {
             const dir = path.dirname(this.dbPath);
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
+                console.log(`[DatabaseManager] Created directory: ${dir}`);
+            } else {
+                console.log(`[DatabaseManager] Directory exists: ${dir}`);
+                try {
+                    const files = fs.readdirSync(dir);
+                    console.log(`[DatabaseManager] Directory contents:`, files);
+                    const dbExists = fs.existsSync(this.dbPath);
+                    if (dbExists) {
+                        const stats = fs.statSync(this.dbPath);
+                        console.log(`[DatabaseManager] Found existing DB. Size: ${stats.size} bytes`);
+                    } else {
+                        console.log(`[DatabaseManager] No existing DB found at ${this.dbPath}. Creating new one.`);
+                    }
+                } catch (e) {
+                    console.error('[DatabaseManager] Error checking directory/file:', e);
+                }
             }
 
             this.db = new Database(this.dbPath);
@@ -504,13 +520,16 @@ export class DatabaseManager {
     public seedDemoMeeting() {
         if (!this.db) return;
 
-        // Flush the entire meetings table
-        try {
-            this.db.prepare('DELETE FROM meetings').run();
-            console.log('[DatabaseManager] Flushed all meetings.');
-        } catch (e) {
-            console.error('[DatabaseManager] Error flushing meetings:', e);
+        // Check if demo meeting already exists
+        const existing = this.db.prepare('SELECT id FROM meetings WHERE id = ?').get('demo-meeting');
+        if (existing) {
+            console.log('[DatabaseManager] Demo meeting already exists, skipping seed.');
+            return;
         }
+
+        // Do NOT flush all meetings. Preserving user data is critical.
+        // If we really need to clean up old demo data, we should delete only that ID.
+        // this.deleteMeeting('demo-meeting'); // Optional safety if we wanted to force update
 
         const demoId = 'demo-meeting';
 

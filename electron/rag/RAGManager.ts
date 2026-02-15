@@ -18,11 +18,6 @@ export interface RAGManagerConfig {
 
 /**
  * RAGManager - Central orchestrator for RAG operations
- * 
- * Lifecycle:
- * 1. Initialize with database and API key
- * 2. When meeting ends: processMeeting() -> chunks + queue embeddings
- * 3. When user queries: query() -> retrieve + stream response
  */
 export class RAGManager {
     private db: Database.Database;
@@ -107,7 +102,6 @@ export class RAGManager {
 
     /**
      * Query meeting with RAG
-     * Returns streaming generator for response
      */
     async *queryMeeting(
         meetingId: string,
@@ -118,27 +112,18 @@ export class RAGManager {
             throw new Error('LLM helper not initialized');
         }
 
-        // Check if meeting has embeddings
         const hasEmbeddings = this.vectorStore.hasEmbeddings(meetingId);
-
         if (!hasEmbeddings) {
-            // Fallback: no embeddings available yet - trigger wrapper fallback
             throw new Error('NO_MEETING_EMBEDDINGS');
         }
 
-        // Retrieve relevant context
         const context = await this.retriever.retrieve(query, { meetingId });
-
         if (context.chunks.length === 0) {
-            // No context relevant to query - trigger wrapper fallback to use context window
             throw new Error('NO_RELEVANT_CONTEXT_FOUND');
         }
 
-        // Build prompt with intent hint
         const prompt = buildRAGPrompt(query, context.formattedContext, 'meeting', context.intent);
-
-        // Stream response
-        const stream = this.llmHelper.streamChatWithGemini(prompt, undefined, undefined, true);
+        const stream = this.llmHelper.streamChat(prompt, undefined, undefined, "");
 
         for await (const chunk of stream) {
             if (abortSignal?.aborted) break;
@@ -157,19 +142,14 @@ export class RAGManager {
             throw new Error('LLM helper not initialized');
         }
 
-        // Retrieve from all meetings
         const context = await this.retriever.retrieveGlobal(query);
-
         if (context.chunks.length === 0) {
             yield NO_GLOBAL_CONTEXT_FALLBACK;
             return;
         }
 
-        // Build prompt with intent hint
         const prompt = buildRAGPrompt(query, context.formattedContext, 'global', context.intent);
-
-        // Stream response
-        const stream = this.llmHelper.streamChatWithGemini(prompt, undefined, undefined, true);
+        const stream = this.llmHelper.streamChat(prompt, undefined, undefined, "");
 
         for await (const chunk of stream) {
             if (abortSignal?.aborted) break;
@@ -224,36 +204,23 @@ export class RAGManager {
 
     /**
      * Manually trigger processing for a meeting
-     * Useful for demo meetings or reprocessing failed ones
      */
     async reprocessMeeting(meetingId: string): Promise<void> {
         console.log(`[RAGManager] Reprocessing meeting ${meetingId}`);
-
-        // delete existing RAG data first to avoid duplicates
         this.deleteMeetingData(meetingId);
 
-        // Fetch meeting details from DB
         const { DatabaseManager } = require('../db/DatabaseManager');
         const meeting = DatabaseManager.getInstance().getMeetingDetails(meetingId);
 
-        if (!meeting) {
-            console.error(`[RAGManager] Meeting ${meetingId} not found for reprocessing`);
-            return;
-        }
+        if (!meeting) return;
+        if (!meeting.transcript || meeting.transcript.length === 0) return;
 
-        if (!meeting.transcript || meeting.transcript.length === 0) {
-            console.log(`[RAGManager] Meeting ${meetingId} has no transcript, skipping`);
-            return;
-        }
-
-        // Convert to RawSegment format
         const segments = meeting.transcript.map((t: any) => ({
             speaker: t.speaker,
             text: t.text,
             timestamp: t.timestamp
         }));
 
-        // Get summary if available
         let summary: string | undefined;
         if (meeting.detailedSummary) {
             summary = [
@@ -270,24 +237,33 @@ export class RAGManager {
 
     /**
      * Ensure demo meeting is processed
-     * Checks if demo meeting exists but has no chunks, then processes it
      */
     async ensureDemoMeetingProcessed(): Promise<void> {
-        const demoId = 'demo-meeting-004';
-
-        // Check if demo meeting exists in DB
+        const demoId = 'demo-meeting';
         const { DatabaseManager } = require('../db/DatabaseManager');
         const meeting = DatabaseManager.getInstance().getMeetingDetails(demoId);
 
-        if (!meeting) return; // No demo meeting, nothing to do
-
-        // Check if already processed
-        if (this.isMeetingProcessed(demoId)) {
-            // console.log('[RAGManager] Demo meeting already processed');
-            return;
-        }
+        if (!meeting) return;
+        if (this.isMeetingProcessed(demoId)) return;
 
         console.log('[RAGManager] Demo meeting found but not processed. Processing now...');
         await this.reprocessMeeting(demoId);
+    }
+
+    /**
+     * Cleanup stale queue items
+     */
+    public cleanupStaleQueueItems(): void {
+        try {
+            const info = this.db.prepare(`
+                DELETE FROM embedding_queue 
+                WHERE meeting_id NOT IN (SELECT id FROM meetings)
+            `).run();
+            if (info.changes > 0) {
+                console.log(`[RAGManager] Cleaned up ${info.changes} stale queue items`);
+            }
+        } catch (error) {
+            console.error('[RAGManager] Failed to cleanup stale queue items:', error);
+        }
     }
 }

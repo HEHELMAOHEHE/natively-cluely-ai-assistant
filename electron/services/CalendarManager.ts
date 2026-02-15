@@ -12,7 +12,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_CLIENT_ID_HERE";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "YOUR_CLIENT_SECRET_HERE";
 const REDIRECT_URI = "http://localhost:11111/auth/callback";
 const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
-const TOKEN_PATH = () => path.join(app.getPath('userData'), 'calendar_tokens.enc');
+const TOKEN_PATH = path.join(app.getPath('userData'), 'calendar_tokens.enc');
 
 if (GOOGLE_CLIENT_ID === "YOUR_CLIENT_ID_HERE" || GOOGLE_CLIENT_SECRET === "YOUR_CLIENT_SECRET_HERE") {
     console.warn('[CalendarManager] Google OAuth credentials are using defaults. Calendar features will not work until valid credentials are provided via env vars.');
@@ -106,8 +106,8 @@ export class CalendarManager extends EventEmitter {
         this.expiryDate = null;
         this.isConnected = false;
 
-        if (fs.existsSync(TOKEN_PATH())) {
-            fs.unlinkSync(TOKEN_PATH());
+        if (fs.existsSync(TOKEN_PATH)) {
+            fs.unlinkSync(TOKEN_PATH);
         }
 
         this.emit('connection-changed', false);
@@ -226,16 +226,16 @@ export class CalendarManager extends EventEmitter {
         });
 
         const encrypted = safeStorage.encryptString(data);
-        fs.writeFileSync(TOKEN_PATH(), encrypted);
+        fs.writeFileSync(TOKEN_PATH, encrypted);
     }
 
     private loadTokens() {
-        if (!fs.existsSync(TOKEN_PATH())) return;
+        if (!fs.existsSync(TOKEN_PATH)) return;
 
         try {
             if (!safeStorage.isEncryptionAvailable()) return;
 
-            const encrypted = fs.readFileSync(TOKEN_PATH());
+            const encrypted = fs.readFileSync(TOKEN_PATH);
             const decrypted = safeStorage.decryptString(encrypted);
             const data = JSON.parse(decrypted);
 

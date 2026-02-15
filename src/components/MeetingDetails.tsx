@@ -12,10 +12,10 @@ const formatTime = (ms: number) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).toLowerCase();
 };
 
-const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = ((ms % 60000) / 1000).toFixed(0);
-    return `${minutes}:${Number(seconds) < 10 ? '0' : ''}${seconds}`;
+const cleanMarkdown = (content: string) => {
+    if (!content) return '';
+    // Ensure code blocks are on new lines to fix rendering issues
+    return content.replace(/([^\n])```/g, '$1\n\n```');
 };
 
 interface Meeting {
@@ -134,9 +134,6 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
 
     const handleActionItemSave = async (index: number, newVal: string) => {
         const newItems = [...(meeting.detailedSummary?.actionItems || [])];
-        if (!newVal.trim()) {
-            // Optional: Remove empty items? For now just keep empty or update
-        }
         newItems[index] = newVal;
 
         setMeeting(prev => ({
@@ -169,7 +166,6 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
         }
     };
 
-
     return (
         <div className="h-full w-full flex flex-col bg-bg-secondary dark:bg-[#0C0C0C] text-text-secondary font-sans overflow-hidden">
             {/* Main Content */}
@@ -178,17 +174,15 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1, duration: 0.3 }}
-                    className="max-w-4xl mx-auto px-8 py-8 pb-32" // Added pb-32 for floating footer clearance
+                    className="max-w-4xl mx-auto px-8 py-8 pb-32"
                 >
-                    {/* Meta Info & Actions Row */}
+                    {/* Meta Info */}
                     <div className="flex items-start justify-between mb-6">
                         <div className="w-full pr-4">
-                            {/* Date formatting could be improved to use meeting.date if it's an ISO string */}
                             <div className="text-xs text-text-tertiary font-medium mb-1">
                                 {new Date(meeting.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                             </div>
 
-                            {/* Editable Title */}
                             <EditableTextBlock
                                 initialValue={meeting.title}
                                 onSave={handleTitleSave}
@@ -197,13 +191,9 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                 multiline={false}
                             />
                         </div>
-
-                        {/* Moved Actions: Follow-up & Share (REMOVED per user request) */}
-                        {/* <div className="flex items-center gap-2 mt-1"> ... </div> */}
                     </div>
 
                     {/* Tabs */}
-                    {/* Designing Tabs to match reference 1:1 (Dark Pill Container) */}
                     <div className="flex items-center justify-between mb-8">
                         <div className="bg-[#E5E5EA] dark:bg-[#121214] p-1 rounded-xl inline-flex items-center gap-0.5 border border-black/[0.04] dark:border-white/[0.08]">
                             {['summary', 'transcript', 'usage'].map((tab) => (
@@ -228,7 +218,6 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                             ))}
                         </div>
 
-                        {/* Copy Button - Inline with Tabs (Always visible) */}
                         <button
                             onClick={handleCopy}
                             className="flex items-center gap-2 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors"
@@ -240,48 +229,17 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
 
                     {/* Tab Content */}
                     <div className="space-y-8">
-                        {/* Using standard divs for content, framer motion for layout */}
                         {activeTab === 'summary' && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                {/* Overview - Rendered as Markdown */}
                                 <div className="mb-6 pb-6 border-b border-border-subtle prose prose-sm dark:prose-invert max-w-none">
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-text-primary mt-4 mb-2" {...props} />,
-                                            h2: ({ node, ...props }) => <h2 className="text-lg font-semibold text-text-primary mt-4 mb-2" {...props} />,
-                                            h3: ({ node, ...props }) => <h3 className="text-base font-semibold text-text-primary mt-3 mb-1" {...props} />,
-                                            p: ({ node, ...props }) => <p className="text-sm text-text-secondary leading-relaxed mb-2" {...props} />,
-                                            ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
-                                            ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
-                                            li: ({ node, ...props }) => <li className="text-sm text-text-secondary" {...props} />,
-                                            strong: ({ node, ...props }) => <strong className="font-semibold text-text-primary" {...props} />,
-                                            a: ({ node, ...props }) => <a className="text-blue-500 hover:underline" {...props} />,
-                                        }}
-                                    >
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                         {meeting.detailedSummary?.overview || ''}
                                     </ReactMarkdown>
                                 </div>
 
-
-                                {/* Action Items - Only show if there are items */}
                                 {meeting.detailedSummary?.actionItems && meeting.detailedSummary.actionItems.length > 0 && (
                                     <section className="mb-8">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <EditableTextBlock
-                                                initialValue={meeting.detailedSummary?.actionItemsTitle || 'Action Items'}
-                                                onSave={(val) => {
-                                                    setMeeting(prev => ({
-                                                        ...prev,
-                                                        detailedSummary: { ...prev.detailedSummary!, actionItemsTitle: val }
-                                                    }));
-                                                    window.electronAPI?.updateMeetingSummary(meeting.id, { actionItemsTitle: val });
-                                                }}
-                                                tagName="h2"
-                                                className="text-lg font-semibold text-text-primary -ml-2 px-2 py-1 rounded-sm transition-colors"
-                                                multiline={false}
-                                            />
-                                        </div>
+                                        <h2 className="text-lg font-semibold text-text-primary mb-4">Action Items</h2>
                                         <ul className="space-y-3">
                                             {meeting.detailedSummary.actionItems.map((item, i) => (
                                                 <li key={i} className="flex items-start gap-3 group">
@@ -292,15 +250,6 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                                             onSave={(val) => handleActionItemSave(i, val)}
                                                             tagName="p"
                                                             className="text-sm text-text-secondary leading-relaxed -ml-2 px-2 rounded-sm transition-colors"
-                                                            placeholder="Type an action item..."
-                                                            onEnter={() => {
-                                                                const newItems = [...(meeting.detailedSummary?.actionItems || [])];
-                                                                newItems.splice(i + 1, 0, "");
-                                                                setMeeting(prev => ({
-                                                                    ...prev,
-                                                                    detailedSummary: { ...prev.detailedSummary!, actionItems: newItems }
-                                                                }));
-                                                            }}
                                                         />
                                                     </div>
                                                 </li>
@@ -309,24 +258,9 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                     </section>
                                 )}
 
-                                {/* Key Points - Only show if there are items */}
                                 {meeting.detailedSummary?.keyPoints && meeting.detailedSummary.keyPoints.length > 0 && (
                                     <section>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <EditableTextBlock
-                                                initialValue={meeting.detailedSummary?.keyPointsTitle || 'Key Points'}
-                                                onSave={(val) => {
-                                                    setMeeting(prev => ({
-                                                        ...prev,
-                                                        detailedSummary: { ...prev.detailedSummary!, keyPointsTitle: val }
-                                                    }));
-                                                    window.electronAPI?.updateMeetingSummary(meeting.id, { keyPointsTitle: val });
-                                                }}
-                                                tagName="h2"
-                                                className="text-lg font-semibold text-text-primary -ml-2 px-2 py-1 rounded-sm transition-colors"
-                                                multiline={false}
-                                            />
-                                        </div>
+                                        <h2 className="text-lg font-semibold text-text-primary mb-4">Key Points</h2>
                                         <ul className="space-y-3">
                                             {meeting.detailedSummary.keyPoints.map((item, i) => (
                                                 <li key={i} className="flex items-start gap-3 group">
@@ -337,15 +271,6 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                                             onSave={(val) => handleKeyPointSave(i, val)}
                                                             tagName="p"
                                                             className="text-sm text-text-secondary leading-relaxed -ml-2 px-2 rounded-sm transition-colors"
-                                                            placeholder="Type a key point..."
-                                                            onEnter={() => {
-                                                                const newItems = [...(meeting.detailedSummary?.keyPoints || [])];
-                                                                newItems.splice(i + 1, 0, "");
-                                                                setMeeting(prev => ({
-                                                                    ...prev,
-                                                                    detailedSummary: { ...prev.detailedSummary!, keyPoints: newItems }
-                                                                }));
-                                                            }}
                                                         />
                                                     </div>
                                                 </li>
@@ -359,31 +284,17 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                         {activeTab === 'transcript' && (
                             <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                                 <div className="space-y-6">
-                                    {(() => {
-                                        console.log('Raw Transcript:', meeting.transcript);
-                                        const filteredTranscript = meeting.transcript?.filter(entry => {
-                                            const isHidden = ['system', 'ai', 'assistant', 'model'].includes(entry.speaker?.toLowerCase());
-                                            if (isHidden) console.log('Filtered out:', entry);
-                                            return !isHidden;
-                                        }) || [];
-                                        console.log('Filtered Transcript:', filteredTranscript);
-
-                                        if (filteredTranscript.length === 0) {
-                                            return <p className="text-text-tertiary">No transcript available.</p>;
-                                        }
-
-                                        return filteredTranscript.map((entry, i) => (
-                                            <div key={i} className="group">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-xs font-semibold text-text-secondary">
-                                                        {entry.speaker === 'user' ? 'Me' : 'Them'}
-                                                    </span>
-                                                    <span className="text-xs text-text-tertiary font-mono">{entry.timestamp ? formatTime(entry.timestamp) : '0:00'}</span>
-                                                </div>
-                                                <p className="text-text-secondary text-[15px] leading-relaxed transition-colors select-text cursor-text">{entry.text}</p>
+                                    {meeting.transcript?.map((entry, i) => (
+                                        <div key={i} className="group">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-xs font-semibold text-text-secondary">
+                                                    {entry.speaker === 'user' ? 'Me' : 'Them'}
+                                                </span>
+                                                <span className="text-xs text-text-tertiary font-mono">{formatTime(entry.timestamp)}</span>
                                             </div>
-                                        ));
-                                    })()}
+                                            <p className="text-text-secondary text-[15px] leading-relaxed transition-colors select-text cursor-text">{entry.text}</p>
+                                        </div>
+                                    )) || <p className="text-text-tertiary">No transcript available.</p>}
                                 </div>
                             </motion.section>
                         )}
@@ -392,16 +303,13 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                             <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8 pb-10">
                                 {meeting.usage?.map((interaction, i) => (
                                     <div key={i} className="space-y-4">
-                                        {/* User Question */}
                                         {interaction.question && (
                                             <div className="flex justify-end">
-                                                <div className="bg-accent-primary text-white px-5 py-2.5 rounded-2xl rounded-tr-sm max-w-[80%] text-[15px] font-medium leading-relaxed shadow-sm">
+                                                <div className="bg-[#007AFF] text-white px-5 py-2.5 rounded-2xl rounded-tr-sm max-w-[80%] text-[15px] font-medium leading-relaxed shadow-sm">
                                                     {interaction.question}
                                                 </div>
                                             </div>
                                         )}
-
-                                        {/* AI Answer */}
                                         {interaction.answer && (
                                             <div className="flex items-start gap-4">
                                                 <div className="mt-1 w-6 h-6 rounded-full bg-bg-input flex items-center justify-center border border-border-subtle shrink-0">
@@ -409,7 +317,11 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                                 </div>
                                                 <div>
                                                     <div className="text-[11px] text-text-tertiary mb-1.5 font-medium">{formatTime(interaction.timestamp)}</div>
-                                                    <p className="text-text-secondary text-[15px] leading-relaxed whitespace-pre-wrap">{interaction.answer}</p>
+                                                    <div className="text-text-secondary text-[15px] leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {cleanMarkdown(interaction.answer || '')}
+                                                        </ReactMarkdown>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -422,29 +334,26 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                 </motion.div>
             </main>
 
-            {/* Floating Footer (Ask Bar) */}
+            {/* Floating Footer */}
             <div className={`absolute bottom-0 left-0 right-0 p-6 flex justify-center pointer-events-none ${isChatOpen ? 'z-50' : 'z-20'}`}>
                 <div className="w-full max-w-[440px] relative group pointer-events-auto">
-                    {/* Dark Glass Effect Input (Matching Reference) */}
                     <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onKeyDown={handleInputKeyDown}
                         placeholder="Ask about this meeting..."
-                        className="w-full pl-5 pr-12 py-3 bg-transparent backdrop-blur-[24px] backdrop-saturate-[140%] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 dark:border-white/10 rounded-full text-sm text-text-primary placeholder-text-tertiary/70 focus:outline-none transition-shadow duration-200"
+                        className="w-full pl-5 pr-12 py-3 bg-white/10 dark:bg-black/20 backdrop-blur-[24px] shadow-xl border border-white/20 dark:border-white/10 rounded-full text-sm text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
                     />
                     <button
                         onClick={handleSubmitQuestion}
-                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all duration-200 border border-white/5 ${query.trim() ? 'bg-text-primary text-bg-primary hover:scale-105' : 'bg-bg-item-active text-text-primary hover:bg-bg-item-hover'
-                            }`}
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all ${query.trim() ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-400'}`}
                     >
-                        <ArrowUp size={16} className="transform rotate-45" />
+                        <ArrowUp size={16} />
                     </button>
                 </div>
             </div>
 
-            {/* Chat Overlay */}
             <MeetingChatOverlay
                 isOpen={isChatOpen}
                 onClose={() => {
@@ -453,7 +362,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                     setSubmittedQuery('');
                 }}
                 meetingContext={{
-                    id: meeting.id,  // Required for RAG queries
+                    id: meeting.id,
                     title: meeting.title,
                     summary: meeting.detailedSummary?.overview,
                     keyPoints: meeting.detailedSummary?.keyPoints,
@@ -461,9 +370,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                     transcript: meeting.transcript
                 }}
                 initialQuery={submittedQuery}
-                onNewQuery={(newQuery) => {
-                    setSubmittedQuery(newQuery);
-                }}
+                onNewQuery={(newQuery) => setSubmittedQuery(newQuery)}
             />
         </div>
     );

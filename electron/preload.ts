@@ -1,657 +1,418 @@
-import { contextBridge, ipcRenderer } from "electron"
 
-// Types for the exposed Electron API
-interface ElectronAPI {
-  updateContentDimensions: (dimensions: {
-    width: number
-    height: number
-  }) => Promise<void>
-  getRecognitionLanguages: () => Promise<Record<string, any>>
-  getScreenshots: () => Promise<Array<{ path: string; preview: string }>>
-  deleteScreenshot: (
-    path: string
-  ) => Promise<{ success: boolean; error?: string }>
-  onScreenshotTaken: (
-    callback: (data: { path: string; preview: string }) => void
-  ) => () => void
-  onScreenshotAttached: (
-    callback: (data: { path: string; preview: string }) => void
-  ) => () => void
-  onSolutionsReady: (callback: (solutions: string) => void) => () => void
-  onResetView: (callback: () => void) => () => void
-  onSolutionStart: (callback: () => void) => () => void
-  onDebugStart: (callback: () => void) => () => void
-  onDebugSuccess: (callback: (data: any) => void) => () => void
-  onSolutionError: (callback: (error: string) => void) => () => void
-  onProcessingNoScreenshots: (callback: () => void) => () => void
-  onProblemExtracted: (callback: (data: any) => void) => () => void
-  onSolutionSuccess: (callback: (data: any) => void) => () => void
+import { contextBridge, ipcRenderer } from 'electron';
 
-  onUnauthorized: (callback: () => void) => () => void
-  onDebugError: (callback: (error: string) => void) => () => void
-  takeScreenshot: () => Promise<void>
-  moveWindowLeft: () => Promise<void>
-  moveWindowRight: () => Promise<void>
-  moveWindowUp: () => Promise<void>
-  moveWindowDown: () => Promise<void>
-
-  analyzeImageFile: (path: string) => Promise<void>
-  quitApp: () => Promise<void>
-
-  // LLM Model Management
-  getCurrentLlmConfig: () => Promise<{ provider: "ollama" | "gemini"; model: string; isOllama: boolean }>
-  getAvailableOllamaModels: () => Promise<string[]>
-  switchToOllama: (model?: string, url?: string) => Promise<{ success: boolean; error?: string }>
-  switchToGemini: (apiKey?: string, modelId?: string) => Promise<{ success: boolean; error?: string }>
-  testLlmConnection: () => Promise<{ success: boolean; error?: string }>
-  selectServiceAccount: () => Promise<{ success: boolean; path?: string; cancelled?: boolean; error?: string }>
-
-  // API Key Management
-  setGeminiApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>
-  setGroqApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>
-  getStoredCredentials: () => Promise<{ hasGeminiKey: boolean; hasGroqKey: boolean; googleServiceAccountPath: string | null }>
-
-  // Native Audio Service Events
-  onNativeAudioTranscript: (callback: (transcript: { speaker: string; text: string; final: boolean }) => void) => () => void
-  onNativeAudioSuggestion: (callback: (suggestion: { context: string; lastQuestion: string; confidence: number }) => void) => () => void
-  onNativeAudioConnected: (callback: () => void) => () => void
-  onNativeAudioDisconnected: (callback: () => void) => () => void
-  onSuggestionGenerated: (callback: (data: { question: string; suggestion: string; confidence: number }) => void) => () => void
-  onSuggestionProcessingStart: (callback: () => void) => () => void
-  onSuggestionError: (callback: (error: { error: string }) => void) => () => void
-  generateSuggestion: (context: string, lastQuestion: string) => Promise<{ suggestion: string }>
-  getInputDevices: () => Promise<Array<{ id: string; name: string }>>
-  getOutputDevices: () => Promise<Array<{ id: string; name: string }>>
-  setRecognitionLanguage: (key: string) => Promise<{ success: boolean; error?: string }>
-
-  // Intelligence Mode IPC
-  generateAssist: () => Promise<{ insight: string | null }>
-  generateWhatToSay: (question?: string, imagePath?: string) => Promise<{ answer: string | null; question?: string; error?: string }>
-  generateFollowUp: (intent: string, userRequest?: string) => Promise<{ refined: string | null; intent: string }>
-  generateRecap: () => Promise<{ summary: string | null }>
-  submitManualQuestion: (question: string) => Promise<{ answer: string | null; question: string }>
-  getIntelligenceContext: () => Promise<{ context: string; lastAssistantMessage: string | null; activeMode: string }>
-  resetIntelligence: () => Promise<{ success: boolean; error?: string }>
-
-  // Meeting Lifecycle
-  startMeeting: (metadata?: any) => Promise<{ success: boolean; error?: string }>
-  endMeeting: () => Promise<{ success: boolean; error?: string }>
-  getRecentMeetings: () => Promise<Array<{ id: string; title: string; date: string; duration: string; summary: string }>>
-  getMeetingDetails: (id: string) => Promise<any>
-  updateMeetingTitle: (id: string, title: string) => Promise<boolean>
-  updateMeetingSummary: (id: string, updates: { overview?: string, actionItems?: string[], keyPoints?: string[], actionItemsTitle?: string, keyPointsTitle?: string }) => Promise<boolean>
-  onMeetingsUpdated: (callback: () => void) => () => void
-
-  // Intelligence Mode Events
-  onIntelligenceAssistUpdate: (callback: (data: { insight: string }) => void) => () => void
-  onIntelligenceSuggestedAnswer: (callback: (data: { answer: string; question: string; confidence: number }) => void) => () => void
-  onIntelligenceRefinedAnswer: (callback: (data: { answer: string; intent: string }) => void) => () => void
-  onIntelligenceRecap: (callback: (data: { summary: string }) => void) => () => void
-  onIntelligenceManualStarted: (callback: () => void) => () => void
-  onIntelligenceManualResult: (callback: (data: { answer: string; question: string }) => void) => () => void
-  onIntelligenceModeChanged: (callback: (data: { mode: string }) => void) => () => void
-  onIntelligenceError: (callback: (data: { error: string; mode: string }) => void) => () => void
-
-  invoke: (channel: string, ...args: any[]) => Promise<any>
-  showWindow: () => Promise<void>
-  hideWindow: () => Promise<void>
-  onToggleExpand: (callback: () => void) => () => void
-
-  // Streaming listeners
-  streamGeminiChat: (message: string, imagePath?: string, context?: string, options?: { skipSystemPrompt?: boolean }) => Promise<void>
-  onGeminiStreamToken: (callback: (token: string) => void) => () => void
-  onGeminiStreamDone: (callback: () => void) => () => void
-  onGeminiStreamError: (callback: (error: string) => void) => () => void
-  on: (channel: string, callback: (...args: any[]) => void) => () => void
-
-  onUndetectableChanged: (callback: (state: boolean) => void) => () => void
-
-  // Theme API
-  getThemeMode: () => Promise<{ mode: 'system' | 'light' | 'dark', resolved: 'light' | 'dark' }>
-  setThemeMode: (mode: 'system' | 'light' | 'dark') => Promise<void>
-  onThemeChanged: (callback: (data: { mode: 'system' | 'light' | 'dark', resolved: 'light' | 'dark' }) => void) => () => void
-
-  // Calendar
-  calendarConnect: () => Promise<{ success: boolean; error?: string }>
-  calendarDisconnect: () => Promise<{ success: boolean; error?: string }>
-  getCalendarStatus: () => Promise<{ connected: boolean; email?: string }>
-  getUpcomingEvents: () => Promise<Array<{ id: string; title: string; startTime: string; endTime: string; link?: string; source: 'google' }>>
-  calendarRefresh: () => Promise<{ success: boolean; error?: string }>
-
-  // Auto-Update
-  onUpdateAvailable: (callback: (info: any) => void) => () => void
-  onUpdateDownloaded: (callback: (info: any) => void) => () => void
-  onUpdateChecking: (callback: () => void) => () => void
-  onUpdateNotAvailable: (callback: (info: any) => void) => () => void
-  onUpdateError: (callback: (err: string) => void) => () => void
-  onDownloadProgress: (callback: (progressObj: any) => void) => () => void
-  restartAndInstall: () => Promise<void>
-  checkForUpdates: () => Promise<void>
-  downloadUpdate: () => Promise<void>
-
-  // RAG (Retrieval-Augmented Generation) API
-  ragQueryMeeting: (meetingId: string, query: string) => Promise<{ success?: boolean; fallback?: boolean; error?: string }>
-  ragQueryGlobal: (query: string) => Promise<{ success?: boolean; fallback?: boolean; error?: string }>
-  ragCancelQuery: (options: { meetingId?: string; global?: boolean }) => Promise<{ success: boolean }>
-  ragIsMeetingProcessed: (meetingId: string) => Promise<boolean>
-  ragGetQueueStatus: () => Promise<{ pending: number; processing: number; completed: number; failed: number }>
-  ragRetryEmbeddings: () => Promise<{ success: boolean }>
-  onRAGStreamChunk: (callback: (data: { meetingId?: string; global?: boolean; chunk: string }) => void) => () => void
-  onRAGStreamComplete: (callback: (data: { meetingId?: string; global?: boolean }) => void) => () => void
-  onRAGStreamError: (callback: (data: { meetingId?: string; global?: boolean; error: string }) => void) => () => void
+declare global {
+  interface Window {
+    electronAPI: any;
+  }
 }
 
-export const PROCESSING_EVENTS = {
-  //global states
-  UNAUTHORIZED: "procesing-unauthorized",
-  NO_SCREENSHOTS: "processing-no-screenshots",
+contextBridge.exposeInMainWorld('electronAPI', {
+  // --- Window Management ---
+  minimize: () => ipcRenderer.send('window-minimize'),
+  maximize: () => ipcRenderer.send('window-maximize'),
+  restore: () => ipcRenderer.send('window-restore'),
+  close: () => ipcRenderer.send('window-close'),
+  showWindow: () => ipcRenderer.invoke('show-window'),
+  hideWindow: () => ipcRenderer.invoke('hide-window'),
+  toggleMain: () => ipcRenderer.send('toggle-main'),
+  toggleWindow: () => ipcRenderer.send('toggle-main'), // Alias for NativelyInterface
+  toggleSettings: (pos?: { x: number, y: number }) => ipcRenderer.invoke('toggle-settings-window', pos),
+  closeSettings: () => ipcRenderer.invoke('close-settings-window'),
+  dragWindow: (isDragging: boolean) => ipcRenderer.send('drag-window', isDragging),
+  setIgnoreMouseEvents: (ignore: boolean, options?: { forward: boolean }) => ipcRenderer.send('set-ignore-mouse-events', ignore, options),
 
-  //states for generating the initial solution
-  INITIAL_START: "initial-start",
-  PROBLEM_EXTRACTED: "problem-extracted",
-  SOLUTION_SUCCESS: "solution-success",
-  INITIAL_SOLUTION_ERROR: "solution-error",
-
-  //states for processing the debugging
-  DEBUG_START: "debug-start",
-  DEBUG_SUCCESS: "debug-success",
-  DEBUG_ERROR: "debug-error"
-} as const
-
-// Expose the Electron API to the renderer process
-contextBridge.exposeInMainWorld("electronAPI", {
-  updateContentDimensions: (dimensions: { width: number; height: number }) =>
-    ipcRenderer.invoke("update-content-dimensions", dimensions),
-  getRecognitionLanguages: () => ipcRenderer.invoke("get-recognition-languages"),
-  takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
-  getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
-  deleteScreenshot: (path: string) =>
-    ipcRenderer.invoke("delete-screenshot", path),
-
-  // Event listeners
-  onScreenshotTaken: (
-    callback: (data: { path: string; preview: string }) => void
-  ) => {
-    const subscription = (_: any, data: { path: string; preview: string }) =>
-      callback(data)
-    ipcRenderer.on("screenshot-taken", subscription)
-    return () => {
-      ipcRenderer.removeListener("screenshot-taken", subscription)
-    }
+  // Window Events
+  onWindowFocus: (callback: (isFocused: boolean) => void) => {
+    const listener = (_event: any, isFocused: boolean) => callback(isFocused);
+    ipcRenderer.on('window-focus', listener);
+    return () => ipcRenderer.removeListener('window-focus', listener);
   },
-  onScreenshotAttached: (
-    callback: (data: { path: string; preview: string }) => void
-  ) => {
-    const subscription = (_: any, data: { path: string; preview: string }) =>
-      callback(data)
-    ipcRenderer.on("screenshot-attached", subscription)
-    return () => {
-      ipcRenderer.removeListener("screenshot-attached", subscription)
-    }
-  },
-  onSolutionsReady: (callback: (solutions: string) => void) => {
-    const subscription = (_: any, solutions: string) => callback(solutions)
-    ipcRenderer.on("solutions-ready", subscription)
-    return () => {
-      ipcRenderer.removeListener("solutions-ready", subscription)
-    }
-  },
-  onResetView: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("reset-view", subscription)
-    return () => {
-      ipcRenderer.removeListener("reset-view", subscription)
-    }
-  },
-  onSolutionStart: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on(PROCESSING_EVENTS.INITIAL_START, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.INITIAL_START, subscription)
-    }
-  },
-  onDebugStart: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on(PROCESSING_EVENTS.DEBUG_START, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_START, subscription)
-    }
+  onHideApp: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('hide-app', listener);
+    return () => ipcRenderer.removeListener('hide-app', listener);
   },
 
-  onDebugSuccess: (callback: (data: any) => void) => {
-    ipcRenderer.on("debug-success", (_event, data) => callback(data))
-    return () => {
-      ipcRenderer.removeListener("debug-success", (_event, data) =>
-        callback(data)
-      )
-    }
-  },
-  onDebugError: (callback: (error: string) => void) => {
-    const subscription = (_: any, error: string) => callback(error)
-    ipcRenderer.on(PROCESSING_EVENTS.DEBUG_ERROR, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_ERROR, subscription)
-    }
-  },
-  onSolutionError: (callback: (error: string) => void) => {
-    const subscription = (_: any, error: string) => callback(error)
-    ipcRenderer.on(PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR, subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
-        subscription
-      )
-    }
-  },
-  onProcessingNoScreenshots: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on(PROCESSING_EVENTS.NO_SCREENSHOTS, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.NO_SCREENSHOTS, subscription)
-    }
-  },
+  // --- Session & Intelligence Flow ---
+  startSession: (metadata?: any) => ipcRenderer.invoke('start-session', metadata),
+  stopSession: () => ipcRenderer.invoke('stop-session'),
+  startMeeting: (metadata?: any) => ipcRenderer.invoke('start-session', metadata), // Alias
+  endMeeting: () => ipcRenderer.invoke('stop-session'), // Alias
+  resetIntelligence: () => ipcRenderer.invoke('reset-intelligence'),
 
-  onProblemExtracted: (callback: (data: any) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on(PROCESSING_EVENTS.PROBLEM_EXTRACTED, subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        PROCESSING_EVENTS.PROBLEM_EXTRACTED,
-        subscription
-      )
-    }
-  },
-  onSolutionSuccess: (callback: (data: any) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on(PROCESSING_EVENTS.SOLUTION_SUCCESS, subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        PROCESSING_EVENTS.SOLUTION_SUCCESS,
-        subscription
-      )
-    }
-  },
-  onUnauthorized: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
-    }
-  },
-  moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
-  moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
-  moveWindowUp: () => ipcRenderer.invoke("move-window-up"),
-  moveWindowDown: () => ipcRenderer.invoke("move-window-down"),
-  minimizeWindow: () => ipcRenderer.invoke("minimize-window"),
-  maximizeWindow: () => ipcRenderer.invoke("maximize-window"),
-  closeWindow: () => ipcRenderer.invoke("close-window"),
+  // Intelligence Generation (NEW)
+  generateWhatToSay: (question?: string, imagePath?: string) => ipcRenderer.invoke('generate-what-to-say', question, imagePath),
+  generateFollowUp: (intent: string) => ipcRenderer.invoke('generate-follow-up', intent),
+  generateRecap: () => ipcRenderer.invoke('generate-recap'),
+  generateFollowUpQuestions: () => ipcRenderer.invoke('generate-follow-up-questions'),
 
-  analyzeImageFile: (path: string) => ipcRenderer.invoke("analyze-image-file", path),
-  quitApp: () => ipcRenderer.invoke("quit-app"),
-  toggleWindow: () => ipcRenderer.invoke("toggle-window"),
-  showWindow: () => ipcRenderer.invoke("show-window"),
-  hideWindow: () => ipcRenderer.invoke("hide-window"),
-  openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
-  setUndetectable: (state: boolean) => ipcRenderer.invoke("set-undetectable", state),
-  getUndetectable: () => ipcRenderer.invoke("get-undetectable"),
-  setOpenAtLogin: (open: boolean) => ipcRenderer.invoke("set-open-at-login", open),
-  getOpenAtLogin: () => ipcRenderer.invoke("get-open-at-login"),
-
-  onSettingsVisibilityChange: (callback: (isVisible: boolean) => void) => {
-    const subscription = (_: any, isVisible: boolean) => callback(isVisible)
-    ipcRenderer.on("settings-visibility-changed", subscription)
-    return () => {
-      ipcRenderer.removeListener("settings-visibility-changed", subscription)
-    }
+  // Generic Intelligence Events
+  onTranscriptionToken: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('transcription-token', listener);
+    return () => ipcRenderer.removeListener('transcription-token', listener);
   },
-
-  onToggleExpand: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("toggle-expand", subscription)
-    return () => {
-      ipcRenderer.removeListener("toggle-expand", subscription)
-    }
+  onNativeAudioTranscript: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('native-audio-transcript', listener);
+    return () => ipcRenderer.removeListener('native-audio-transcript', listener);
   },
-
-  // LLM Model Management
-  getCurrentLlmConfig: () => ipcRenderer.invoke("get-current-llm-config"),
-  getAvailableOllamaModels: () => ipcRenderer.invoke("get-available-ollama-models"),
-  switchToOllama: (model?: string, url?: string) => ipcRenderer.invoke("switch-to-ollama", model, url),
-  switchToGemini: (apiKey?: string, modelId?: string) => ipcRenderer.invoke("switch-to-gemini", apiKey, modelId),
-  testLlmConnection: () => ipcRenderer.invoke("test-llm-connection"),
-  selectServiceAccount: () => ipcRenderer.invoke("select-service-account"),
-
-  // API Key Management
-  setGeminiApiKey: (apiKey: string) => ipcRenderer.invoke("set-gemini-api-key", apiKey),
-  setGroqApiKey: (apiKey: string) => ipcRenderer.invoke("set-groq-api-key", apiKey),
-  getStoredCredentials: () => ipcRenderer.invoke("get-stored-credentials"),
-
-  // Native Audio Service Events
-  onNativeAudioTranscript: (callback: (transcript: { speaker: string; text: string; final: boolean }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("native-audio-transcript", subscription)
-    return () => {
-      ipcRenderer.removeListener("native-audio-transcript", subscription)
-    }
+  onMeetingEnd: (callback: (data: { meetingId: string }) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('meeting-end', listener);
+    return () => ipcRenderer.removeListener('meeting-end', listener);
   },
-  onNativeAudioSuggestion: (callback: (suggestion: { context: string; lastQuestion: string; confidence: number }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("native-audio-suggestion", subscription)
-    return () => {
-      ipcRenderer.removeListener("native-audio-suggestion", subscription)
-    }
-  },
-  onNativeAudioConnected: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("native-audio-connected", subscription)
-    return () => {
-      ipcRenderer.removeListener("native-audio-connected", subscription)
-    }
-  },
-  onNativeAudioDisconnected: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("native-audio-disconnected", subscription)
-    return () => {
-      ipcRenderer.removeListener("native-audio-disconnected", subscription)
-    }
-  },
-  onSuggestionGenerated: (callback: (data: { question: string; suggestion: string; confidence: number }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("suggestion-generated", subscription)
-    return () => {
-      ipcRenderer.removeListener("suggestion-generated", subscription)
-    }
-  },
-  onSuggestionProcessingStart: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("suggestion-processing-start", subscription)
-    return () => {
-      ipcRenderer.removeListener("suggestion-processing-start", subscription)
-    }
-  },
-  onSuggestionError: (callback: (error: { error: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("suggestion-error", subscription)
-    return () => {
-      ipcRenderer.removeListener("suggestion-error", subscription)
-    }
-  },
-  generateSuggestion: (context: string, lastQuestion: string) =>
-    ipcRenderer.invoke("generate-suggestion", context, lastQuestion),
-
-  getNativeAudioStatus: () => ipcRenderer.invoke("native-audio-status"),
-  getInputDevices: () => ipcRenderer.invoke("get-input-devices"),
-  getOutputDevices: () => ipcRenderer.invoke("get-output-devices"),
-  setRecognitionLanguage: (key: string) => ipcRenderer.invoke("set-recognition-language", key),
-
-  // Intelligence Mode IPC
-  generateAssist: () => ipcRenderer.invoke("generate-assist"),
-  generateWhatToSay: (question?: string, imagePath?: string) => ipcRenderer.invoke("generate-what-to-say", question, imagePath),
-  generateFollowUp: (intent: string, userRequest?: string) => ipcRenderer.invoke("generate-follow-up", intent, userRequest),
-  generateFollowUpQuestions: () => ipcRenderer.invoke("generate-follow-up-questions"),
-  generateRecap: () => ipcRenderer.invoke("generate-recap"),
-  submitManualQuestion: (question: string) => ipcRenderer.invoke("submit-manual-question", question),
-  getIntelligenceContext: () => ipcRenderer.invoke("get-intelligence-context"),
-  resetIntelligence: () => ipcRenderer.invoke("reset-intelligence"),
-
-  // Meeting Lifecycle
-  startMeeting: (metadata?: any) => ipcRenderer.invoke("start-meeting", metadata),
-  endMeeting: () => ipcRenderer.invoke("end-meeting"),
-  getRecentMeetings: () => ipcRenderer.invoke("get-recent-meetings"),
-  getMeetingDetails: (id: string) => ipcRenderer.invoke("get-meeting-details", id),
-  updateMeetingTitle: (id: string, title: string) => ipcRenderer.invoke("update-meeting-title", { id, title }),
-  updateMeetingSummary: (id: string, updates: any) => ipcRenderer.invoke("update-meeting-summary", { id, updates }),
-  deleteMeeting: (id: string) => ipcRenderer.invoke("delete-meeting", id),
-
   onMeetingsUpdated: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("meetings-updated", subscription)
-    return () => {
-      ipcRenderer.removeListener("meetings-updated", subscription)
-    }
-  },
-
-  // Window Mode
-  setWindowMode: (mode: 'launcher' | 'overlay') => ipcRenderer.invoke("set-window-mode", mode),
-
-  // Intelligence Mode Events
-  onIntelligenceAssistUpdate: (callback: (data: { insight: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-assist-update", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-assist-update", subscription)
-    }
-  },
-  onIntelligenceSuggestedAnswerToken: (callback: (data: { token: string; question: string; confidence: number }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-suggested-answer-token", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-suggested-answer-token", subscription)
-    }
-  },
-  onIntelligenceSuggestedAnswer: (callback: (data: { answer: string; question: string; confidence: number }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-suggested-answer", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-suggested-answer", subscription)
-    }
-  },
-  onIntelligenceRefinedAnswerToken: (callback: (data: { token: string; intent: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-refined-answer-token", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-refined-answer-token", subscription)
-    }
-  },
-  onIntelligenceRefinedAnswer: (callback: (data: { answer: string; intent: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-refined-answer", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-refined-answer", subscription)
-    }
-  },
-  onIntelligenceRecapToken: (callback: (data: { token: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-recap-token", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-recap-token", subscription)
-    }
-  },
-  onIntelligenceRecap: (callback: (data: { summary: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-recap", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-recap", subscription)
-    }
-  },
-  onIntelligenceFollowUpQuestionsToken: (callback: (data: { token: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-follow-up-questions-token", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-follow-up-questions-token", subscription)
-    }
-  },
-  onIntelligenceFollowUpQuestionsUpdate: (callback: (data: { questions: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-follow-up-questions-update", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-follow-up-questions-update", subscription)
-    }
-  },
-  onIntelligenceManualStarted: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("intelligence-manual-started", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-manual-started", subscription)
-    }
-  },
-  onIntelligenceManualResult: (callback: (data: { answer: string; question: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-manual-result", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-manual-result", subscription)
-    }
-  },
-  onIntelligenceModeChanged: (callback: (data: { mode: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-mode-changed", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-mode-changed", subscription)
-    }
-  },
-  onIntelligenceError: (callback: (data: { error: string; mode: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on("intelligence-error", subscription)
-    return () => {
-      ipcRenderer.removeListener("intelligence-error", subscription)
-    }
+    const listener = () => callback();
+    ipcRenderer.on('meetings-updated', listener);
+    return () => ipcRenderer.removeListener('meetings-updated', listener);
   },
   onSessionReset: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("session-reset", subscription)
+    const listener = () => callback();
+    ipcRenderer.on('session-reset', listener);
+    return () => ipcRenderer.removeListener('session-reset', listener);
+  },
+  onResetView: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('session-reset', listener);
+    ipcRenderer.on('reset-view', listener);
     return () => {
-      ipcRenderer.removeListener("session-reset", subscription)
-    }
+      ipcRenderer.removeListener('session-reset', listener);
+      ipcRenderer.removeListener('reset-view', listener);
+    };
   },
 
+  // Intelligence Events (Standardized)
+  onSuggestionProcessingStart: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('intelligence-manual-started', listener);
+    return () => ipcRenderer.removeListener('intelligence-manual-started', listener);
+  },
+  onIntelligenceSuggestedAnswerToken: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-suggested-answer-token', listener);
+    return () => ipcRenderer.removeListener('intelligence-suggested-answer-token', listener);
+  },
+  onIntelligenceSuggestedAnswer: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-suggested-answer', listener);
+    return () => ipcRenderer.removeListener('intelligence-suggested-answer', listener);
+  },
+  onIntelligenceRefinedAnswerToken: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-refined-answer-token', listener);
+    return () => ipcRenderer.removeListener('intelligence-refined-answer-token', listener);
+  },
+  onIntelligenceRefinedAnswer: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-refined-answer', listener);
+    return () => ipcRenderer.removeListener('intelligence-refined-answer', listener);
+  },
+  onIntelligenceRecapToken: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-recap-token', listener);
+    return () => ipcRenderer.removeListener('intelligence-recap-token', listener);
+  },
+  onIntelligenceRecap: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-recap', listener);
+    return () => ipcRenderer.removeListener('intelligence-recap', listener);
+  },
+  onIntelligenceFollowUpQuestionsToken: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-follow-up-questions-token', listener);
+    return () => ipcRenderer.removeListener('intelligence-follow-up-questions-token', listener);
+  },
+  onIntelligenceFollowUpQuestionsUpdate: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-follow-up-questions-update', listener);
+    return () => ipcRenderer.removeListener('intelligence-follow-up-questions-update', listener);
+  },
+  onIntelligenceManualResult: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-manual-result', listener);
+    return () => ipcRenderer.removeListener('intelligence-manual-result', listener);
+  },
+  onIntelligenceModeChange: (callback: (mode: string) => void) => {
+    const listener = (_event: any, data: any) => callback(data.mode);
+    ipcRenderer.on('intelligence-mode-changed', listener);
+    return () => ipcRenderer.removeListener('intelligence-mode-changed', listener);
+  },
+  onIntelligenceError: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-error', listener);
+    return () => ipcRenderer.removeListener('intelligence-error', listener);
+  },
 
-  // Streaming Chat
-  streamGeminiChat: (message: string, imagePath?: string, context?: string, options?: { skipSystemPrompt?: boolean }) => ipcRenderer.invoke("gemini-chat-stream", message, imagePath, context, options),
+  // Solution Specific Events
+  onSolutionStart: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('solution-start', listener);
+    return () => ipcRenderer.removeListener('solution-start', listener);
+  },
+  onSolutionError: (callback: (error: any) => void) => {
+    const listener = (_event: any, error: any) => callback(error);
+    ipcRenderer.on('solution-error', listener);
+    return () => ipcRenderer.removeListener('solution-error', listener);
+  },
+  onSolutionSuccess: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('solution-success', listener);
+    return () => ipcRenderer.removeListener('solution-success', listener);
+  },
+  onDebugStart: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('debug-start', listener);
+    return () => ipcRenderer.removeListener('debug-start', listener);
+  },
+  onDebugSuccess: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('debug-success', listener);
+    return () => ipcRenderer.removeListener('debug-success', listener);
+  },
+  onDebugError: (callback: (error: any) => void) => {
+    const listener = (_event: any, error: any) => callback(error);
+    ipcRenderer.on('debug-error', listener);
+    return () => ipcRenderer.removeListener('debug-error', listener);
+  },
+  onProcessingNoScreenshots: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('processing-no-screenshots', listener);
+    return () => ipcRenderer.removeListener('processing-no-screenshots', listener);
+  },
 
+  // --- Gemini / Chat ---
+  streamGeminiChat: (message: string, imagePath?: string, context?: string) =>
+    ipcRenderer.invoke('gemini-chat-stream', message, imagePath, context),
   onGeminiStreamToken: (callback: (token: string) => void) => {
-    const subscription = (_: any, token: string) => callback(token)
-    ipcRenderer.on("gemini-stream-token", subscription)
-    return () => {
-      ipcRenderer.removeListener("gemini-stream-token", subscription)
-    }
+    const listener = (_event: any, token: string) => callback(token);
+    ipcRenderer.on('gemini-stream-token', listener);
+    return () => ipcRenderer.removeListener('gemini-stream-token', listener);
   },
-
   onGeminiStreamDone: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("gemini-stream-done", subscription)
-    return () => {
-      ipcRenderer.removeListener("gemini-stream-done", subscription)
-    }
+    const listener = () => callback();
+    ipcRenderer.on('gemini-stream-done', listener);
+    return () => ipcRenderer.removeListener('gemini-stream-done', listener);
   },
-
   onGeminiStreamError: (callback: (error: string) => void) => {
-    const subscription = (_: any, error: string) => callback(error)
-    ipcRenderer.on("gemini-stream-error", subscription)
-    return () => {
-      ipcRenderer.removeListener("gemini-stream-error", subscription)
-    }
+    const listener = (_event: any, error: string) => callback(error);
+    ipcRenderer.on('gemini-stream-error', listener);
+    return () => ipcRenderer.removeListener('gemini-stream-error', listener);
   },
 
-  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
-
-  on: (channel: string, callback: (...args: any[]) => void) => {
-    const subscription = (_: any, ...args: any[]) => callback(...args)
-    ipcRenderer.on(channel, subscription)
-    return () => {
-      ipcRenderer.removeListener(channel, subscription)
-    }
+  // --- Screenshot Management ---
+  takeScreenshot: () => ipcRenderer.invoke('take-screenshot'),
+  takeSelectiveScreenshot: () => ipcRenderer.invoke('take-selective-screenshot'),
+  getScreenshots: () => ipcRenderer.invoke('get-screenshots'),
+  deleteScreenshot: (path: string) => ipcRenderer.invoke('delete-screenshot', path),
+  onScreenshotTaken: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('screenshot-taken', listener);
+    return () => ipcRenderer.removeListener('screenshot-taken', listener);
+  },
+  onScreenshotAttached: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('screenshot-attached', listener);
+    return () => ipcRenderer.removeListener('screenshot-attached', listener);
   },
 
-  onUndetectableChanged: (callback: (state: boolean) => void) => {
-    const subscription = (_: any, state: boolean) => callback(state)
-    ipcRenderer.on('undetectable-changed', subscription)
-    return () => {
-      ipcRenderer.removeListener('undetectable-changed', subscription)
-    }
+  // --- History & RAG ---
+  getRecentMeetings: (limit?: number) => ipcRenderer.invoke('get-recent-meetings', limit),
+  getMeetingDetails: (id: string) => ipcRenderer.invoke('get-meeting-details', id),
+  updateMeetingTitle: (id: string, title: string) => ipcRenderer.invoke('update-meeting-title', id, title),
+  updateMeetingSummary: (id: string, updates: any) => ipcRenderer.invoke('update-meeting-summary', id, updates),
+  deleteMeeting: (id: string) => ipcRenderer.invoke('delete-meeting', id),
+  clearAllData: () => ipcRenderer.invoke('clear-all-data'),
+  searchMeetings: (query: string) => ipcRenderer.invoke('search-meetings', query),
+  onSearchToken: (callback: (token: string) => void) => {
+    const listener = (_event: any, token: string) => callback(token);
+    ipcRenderer.on('search-token', listener);
+    return () => ipcRenderer.removeListener('search-token', listener);
+  },
+  onSearchComplete: (callback: (answer: string) => void) => {
+    const listener = (_event: any, answer: string) => callback(answer);
+    ipcRenderer.on('search-complete', listener);
+    return () => ipcRenderer.removeListener('search-complete', listener);
   },
 
-  // Theme API
-  getThemeMode: () => ipcRenderer.invoke('theme:get-mode'),
-  setThemeMode: (mode: 'system' | 'light' | 'dark') => ipcRenderer.invoke('theme:set-mode', mode),
-  onThemeChanged: (callback: (data: { mode: 'system' | 'light' | 'dark', resolved: 'light' | 'dark' }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on('theme:changed', subscription)
-    return () => {
-      ipcRenderer.removeListener('theme:changed', subscription)
-    }
+  // Global RAG
+  ragQueryGlobal: (query: string) => ipcRenderer.invoke('rag-query-global', query),
+  onRAGStreamChunk: (callback: (data: { chunk: string }) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('rag-stream-chunk', listener);
+    return () => ipcRenderer.removeListener('rag-stream-chunk', listener);
+  },
+  onRAGStreamComplete: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('rag-stream-complete', listener);
+    return () => ipcRenderer.removeListener('rag-stream-complete', listener);
+  },
+  onRAGStreamError: (callback: (data: { error: string }) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('rag-stream-error', listener);
+    return () => ipcRenderer.removeListener('rag-stream-error', listener);
   },
 
-  // Calendar API
+  // --- Calendar ---
+  getCalendarStatus: () => ipcRenderer.invoke('get-calendar-status').catch(() => ({ connected: false })),
   calendarConnect: () => ipcRenderer.invoke('calendar-connect'),
-  calendarDisconnect: () => ipcRenderer.invoke('calendar-disconnect'),
-  getCalendarStatus: () => ipcRenderer.invoke('get-calendar-status'),
-  getUpcomingEvents: () => ipcRenderer.invoke('get-upcoming-events'),
   calendarRefresh: () => ipcRenderer.invoke('calendar-refresh'),
+  getUpcomingEvents: () => ipcRenderer.invoke('get-upcoming-events'),
 
-  // Auto-Update
+  // --- Credentials & Config ---
+  getCredentials: () => ipcRenderer.invoke('get-credentials'),
+  getStoredCredentials: () => ipcRenderer.invoke('get-credentials'), // Alias
+  saveCredentials: (creds: any) => ipcRenderer.invoke('save-credentials', creds),
+  getCredentialsStatus: () => ipcRenderer.invoke('get-credentials-status'),
+  selectServiceAccount: () => ipcRenderer.invoke('select-service-account'),
+  testReleaseFetch: () => ipcRenderer.invoke('test-release-fetch'),
+
+  // Specific Key Setters (for AIProvidersSettings.tsx)
+  setGeminiApiKey: (key: string) => ipcRenderer.invoke('set-gemini-api-key', key),
+  setGroqApiKey: (key: string) => ipcRenderer.invoke('set-groq-api-key', key),
+  setOpenaiApiKey: (key: string) => ipcRenderer.invoke('set-openai-api-key', key),
+  setClaudeApiKey: (key: string) => ipcRenderer.invoke('set-claude-api-key', key),
+  testLlmConnection: (provider: string, key: string) => ipcRenderer.invoke('test-llm-connection', provider, key),
+
+  // LLM Switching
+  getCurrentLlmConfig: () => ipcRenderer.invoke('get-current-llm-config'),
+  getOllamaModels: () => ipcRenderer.invoke('get-ollama-models'),
+  getAvailableOllamaModels: () => ipcRenderer.invoke('get-available-ollama-models'),
+  switchToOllama: (model: string, url?: string) => ipcRenderer.invoke('switch-to-ollama', model, url),
+  switchToGemini: (apiKey?: string, modelId?: string) => ipcRenderer.invoke('switch-to-gemini', apiKey, modelId),
+  forceRestartOllama: () => ipcRenderer.invoke('force-restart-ollama'),
+  ensureOllamaRunning: () => ipcRenderer.invoke('ensure-ollama-running'),
+  onModelChanged: (callback: (modelId: string) => void) => {
+    const listener = (_event: any, modelId: string) => callback(modelId);
+    ipcRenderer.on('model-changed', listener);
+    return () => ipcRenderer.removeListener('model-changed', listener);
+  },
+
+  // --- Settings & Utils ---
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
+  getSttConfig: () => ipcRenderer.invoke('get-stt-config'),
+  setSttProvider: (provider: string) => ipcRenderer.invoke('set-stt-provider', provider),
+  setRecognitionLanguage: (lang: string) => ipcRenderer.invoke('set-recognition-language', lang),
+  getRecognitionLanguages: () => ipcRenderer.invoke('get-recognition-languages'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  quitApp: () => ipcRenderer.send('window-close'),
+  openUrl: (url: string) => ipcRenderer.invoke('open-url', url),
+  openExternal: (url: string) => ipcRenderer.invoke('open-url', url),
+  getOpenAtLogin: () => ipcRenderer.invoke('get-open-at-login'),
+  setOpenAtLogin: (open: boolean) => ipcRenderer.invoke('set-open-at-login', open),
+  setWindowMode: (mode: 'launcher' | 'overlay') => ipcRenderer.invoke('set-window-mode', mode),
+  updateContentDimensions: (dims: { width: number, height: number }) => ipcRenderer.invoke('update-content-dimensions', dims),
+
+  // --- Undetectable / Disguise ---
+  getUndetectable: () => ipcRenderer.invoke('get-undetectable'),
+  setUndetectable: (state: boolean) => ipcRenderer.invoke('set-undetectable', state),
+  getDisguise: () => ipcRenderer.invoke('get-disguise'),
+  setDisguise: (mode: string) => ipcRenderer.invoke('set-disguise', mode),
+  onUndetectableChanged: (callback: (state: boolean) => void) => {
+    const listener = (_event: any, state: boolean) => callback(state);
+    ipcRenderer.on('undetectable-changed', listener);
+    return () => ipcRenderer.removeListener('undetectable-changed', listener);
+  },
+  onDisguiseChanged: (callback: (mode: string) => void) => {
+    const listener = (_event: any, mode: string) => callback(mode);
+    ipcRenderer.on('disguise-changed', listener);
+    return () => ipcRenderer.removeListener('disguise-changed', listener);
+  },
+  onGroqFastTextChanged: (callback: (state: boolean) => void) => {
+    const listener = (_event: any, state: boolean) => callback(state);
+    ipcRenderer.on('groq-fast-text-changed', listener);
+    return () => ipcRenderer.removeListener('groq-fast-text-changed', listener);
+  },
+
+  // --- Keybinds ---
+  getKeybinds: () => ipcRenderer.invoke('keybinds:get-all'),
+  setKeybind: (id: string, accelerator: string) => ipcRenderer.invoke('keybinds:set', id, accelerator),
+  resetKeybinds: () => ipcRenderer.invoke('keybinds:reset'),
+  onKeybindsUpdate: (callback: (keybinds: any) => void) => {
+    const listener = (_event: any, keybinds: any) => callback(keybinds);
+    ipcRenderer.on('keybinds:update', listener);
+    return () => ipcRenderer.removeListener('keybinds:update', listener);
+  },
+
+  // --- Theme ---
+  getThemeMode: () => ipcRenderer.invoke('get-theme-mode'),
+  setThemeMode: (mode: string) => ipcRenderer.invoke('set-theme-mode', mode),
+  onThemeChanged: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('theme:changed', listener);
+    return () => ipcRenderer.removeListener('theme:changed', listener);
+  },
+
+  // --- Audio ---
+  getNativeAudioStatus: () => ipcRenderer.invoke('get-audio-status'),
+  onNativeAudioConnected: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('audio-connected', listener);
+    return () => ipcRenderer.removeListener('audio-connected', listener);
+  },
+  onNativeAudioDisconnected: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('audio-disconnected', listener);
+    return () => ipcRenderer.removeListener('audio-disconnected', listener);
+  },
+  startAudioTest: (deviceId?: string) => ipcRenderer.send('start-audio-test', deviceId),
+  stopAudioTest: () => ipcRenderer.send('stop-audio-test'),
+  onAudioLevel: (callback: (level: number) => void) => {
+    const listener = (_event: any, level: number) => callback(level);
+    ipcRenderer.on('audio-level', listener);
+    return () => ipcRenderer.removeListener('audio-level', listener);
+  },
+
+  // --- Update ---
+  checkUpdate: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  restartAndInstall: () => ipcRenderer.invoke('quit-and-install-update'),
   onUpdateAvailable: (callback: (info: any) => void) => {
-    const subscription = (_: any, info: any) => callback(info)
-    ipcRenderer.on("update-available", subscription)
-    return () => {
-      ipcRenderer.removeListener("update-available", subscription)
-    }
+    const listener = (_event: any, info: any) => callback(info);
+    ipcRenderer.on('update-available', listener);
+    return () => ipcRenderer.removeListener('update-available', listener);
+  },
+  onDownloadProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('download-progress', listener);
+    return () => ipcRenderer.removeListener('download-progress', listener);
   },
   onUpdateDownloaded: (callback: (info: any) => void) => {
-    const subscription = (_: any, info: any) => callback(info)
-    ipcRenderer.on("update-downloaded", subscription)
-    return () => {
-      ipcRenderer.removeListener("update-downloaded", subscription)
-    }
+    const listener = (_event: any, info: any) => callback(info);
+    ipcRenderer.on('update-downloaded', listener);
+    return () => ipcRenderer.removeListener('update-downloaded', listener);
   },
-  onUpdateChecking: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on("update-checking", subscription)
-    return () => {
-      ipcRenderer.removeListener("update-checking", subscription)
-    }
-  },
-  onUpdateNotAvailable: (callback: (info: any) => void) => {
-    const subscription = (_: any, info: any) => callback(info)
-    ipcRenderer.on("update-not-available", subscription)
-    return () => {
-      ipcRenderer.removeListener("update-not-available", subscription)
-    }
-  },
-  onUpdateError: (callback: (err: string) => void) => {
-    const subscription = (_: any, err: string) => callback(err)
-    ipcRenderer.on("update-error", subscription)
-    return () => {
-      ipcRenderer.removeListener("update-error", subscription)
-    }
-  },
-  onDownloadProgress: (callback: (progressObj: any) => void) => {
-    const subscription = (_: any, progressObj: any) => callback(progressObj)
-    ipcRenderer.on("download-progress", subscription)
-    return () => {
-      ipcRenderer.removeListener("download-progress", subscription)
-    }
-  },
-  restartAndInstall: () => ipcRenderer.invoke("quit-and-install-update"),
-  checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
-  downloadUpdate: () => ipcRenderer.invoke("download-update"),
 
-  // RAG API
-  ragQueryMeeting: (meetingId: string, query: string) => ipcRenderer.invoke('rag:query-meeting', { meetingId, query }),
-  ragQueryGlobal: (query: string) => ipcRenderer.invoke('rag:query-global', { query }),
-  ragCancelQuery: (options: { meetingId?: string; global?: boolean }) => ipcRenderer.invoke('rag:cancel-query', options),
-  ragIsMeetingProcessed: (meetingId: string) => ipcRenderer.invoke('rag:is-meeting-processed', meetingId),
-  ragGetQueueStatus: () => ipcRenderer.invoke('rag:get-queue-status'),
-  ragRetryEmbeddings: () => ipcRenderer.invoke('rag:retry-embeddings'),
+  // --- Donation ---
+  getDonationStatus: () => ipcRenderer.invoke('get-donation-status'),
+  markDonationToastShown: () => ipcRenderer.invoke('mark-donation-toast-shown'),
+  setDonationComplete: () => ipcRenderer.invoke('set-donation-complete'),
 
-  onRAGStreamChunk: (callback: (data: { meetingId?: string; global?: boolean; chunk: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on('rag:stream-chunk', subscription)
-    return () => {
-      ipcRenderer.removeListener('rag:stream-chunk', subscription)
-    }
+  // --- Compatibility / Legacy ---
+  onSettingsVisibilityChange: (callback: (isVisible: boolean) => void) => {
+    const listener = (_event: any, value: boolean) => callback(value);
+    ipcRenderer.on('settings-visibility-changed', listener);
+    return () => ipcRenderer.removeListener('settings-visibility-changed', listener);
   },
-  onRAGStreamComplete: (callback: (data: { meetingId?: string; global?: boolean }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on('rag:stream-complete', subscription)
-    return () => {
-      ipcRenderer.removeListener('rag:stream-complete', subscription)
-    }
+  onToggleExpand: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('toggle-expand', listener);
+    return () => ipcRenderer.removeListener('toggle-expand', listener);
   },
-  onRAGStreamError: (callback: (data: { meetingId?: string; global?: boolean; error: string }) => void) => {
-    const subscription = (_: any, data: any) => callback(data)
-    ipcRenderer.on('rag:stream-error', subscription)
-    return () => {
-      ipcRenderer.removeListener('rag:stream-error', subscription)
-    }
+  onSuggestionGenerated: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-suggested-answer', listener);
+    return () => ipcRenderer.removeListener('intelligence-suggested-answer', listener);
   },
-} as ElectronAPI)
+  onSuggestionError: (callback: (error: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('intelligence-error', listener);
+    return () => ipcRenderer.removeListener('intelligence-error', listener);
+  },
+
+  // Generic Invoke
+  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
+  send: (channel: string, ...args: any[]) => ipcRenderer.send(channel, ...args),
+});

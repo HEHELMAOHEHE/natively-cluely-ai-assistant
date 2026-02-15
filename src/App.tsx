@@ -1,25 +1,56 @@
-import React, { useState } from "react" // forcing refresh
+
+import React, { useState, useEffect } from "react" // forcing refresh
 import { QueryClient, QueryClientProvider } from "react-query"
 import { ToastProvider, ToastViewport } from "./components/ui/toast"
 import NativelyInterface from "./components/NativelyInterface"
-import SettingsPopup from "./components/SettingsPopup" // Keeping for legacy/specific window support if needed
-import AdvancedSettings from "./components/AdvancedSettings"
 import Launcher from "./components/Launcher"
+import ModelSelectorWindow from "./components/ModelSelectorWindow"
+import SettingsPopup from "./components/SettingsPopup"
 import SettingsOverlay from "./components/SettingsOverlay"
 import StartupSequence from "./components/StartupSequence"
 import { AnimatePresence, motion } from "framer-motion"
 import UpdateBanner from "./components/UpdateBanner"
+import { SupportToaster } from "./components/SupportToaster"
+import { analytics } from "./lib/analytics/analytics.service"
 
 const queryClient = new QueryClient()
 
 const App: React.FC = () => {
   const isSettingsWindow = new URLSearchParams(window.location.search).get('window') === 'settings';
-  const isAdvancedWindow = new URLSearchParams(window.location.search).get('window') === 'advanced';
   const isLauncherWindow = new URLSearchParams(window.location.search).get('window') === 'launcher';
   const isOverlayWindow = new URLSearchParams(window.location.search).get('window') === 'overlay';
+  const isModelSelectorWindow = new URLSearchParams(window.location.search).get('window') === 'model-selector';
 
   // Default to launcher if not specified (dev mode safety)
-  const isDefault = !isSettingsWindow && !isAdvancedWindow && !isOverlayWindow;
+  const isDefault = !isSettingsWindow && !isOverlayWindow && !isModelSelectorWindow;
+
+  // Initialize Analytics
+  useEffect(() => {
+    analytics.initAnalytics();
+
+    if (isLauncherWindow || isDefault) {
+      analytics.trackAppOpen();
+    }
+
+    if (isOverlayWindow) {
+      analytics.trackAssistantStart();
+    }
+
+    // Cleanup / Session End
+    const handleUnload = () => {
+      if (isOverlayWindow) {
+        analytics.trackAssistantStop();
+      }
+      if (isLauncherWindow || isDefault) {
+        analytics.trackAppClose();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [isLauncherWindow, isOverlayWindow, isDefault]);
 
   // State
   const [showStartup, setShowStartup] = useState(true);
@@ -44,12 +75,10 @@ const App: React.FC = () => {
       const result = await window.electronAPI.startMeeting({
         audio: { inputDeviceId, outputDeviceId }
       });
+
       if (result.success) {
+        analytics.trackMeetingStarted();
         // Switch to Overlay Mode via IPC
-        // The main process handles window switching, but we can reinforce it or just trust main.
-        // Actually, main process startMeeting triggers nothing UI-wise unless we tell it to switch window
-        // But we configured main.ts to not auto-switch?
-        // Let's explicitly request mode change.
         await window.electronAPI.setWindowMode('overlay');
       } else {
         console.error("Failed to start meeting:", result.error);
@@ -61,6 +90,7 @@ const App: React.FC = () => {
 
   const handleEndMeeting = async () => {
     console.log("[App.tsx] handleEndMeeting triggered");
+    analytics.trackMeetingEnded();
     try {
       await window.electronAPI.endMeeting();
       console.log("[App.tsx] endMeeting IPC completed");
@@ -86,12 +116,12 @@ const App: React.FC = () => {
     );
   }
 
-  if (isAdvancedWindow) {
+  if (isModelSelectorWindow) {
     return (
-      <div className="h-full min-h-0 w-full">
+      <div className="h-full min-h-0 w-full overflow-hidden">
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
-            <AdvancedSettings />
+            <ModelSelectorWindow />
             <ToastViewport />
           </ToastProvider>
         </QueryClientProvider>
@@ -108,6 +138,7 @@ const App: React.FC = () => {
             <NativelyInterface
               onEndMeeting={handleEndMeeting}
             />
+            <UpdateBanner />
             <ToastViewport />
           </ToastProvider>
         </QueryClientProvider>
@@ -157,6 +188,7 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
       <UpdateBanner />
+      <SupportToaster />
     </div>
   )
 }

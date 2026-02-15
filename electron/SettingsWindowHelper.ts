@@ -1,4 +1,5 @@
 import { BrowserWindow, screen } from "electron"
+import { WindowHelper } from "./WindowHelper"
 import path from "node:path"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -10,6 +11,7 @@ const startUrl = isDev
 export class SettingsWindowHelper {
     private settingsWindow: BrowserWindow | null = null
     private advancedWindow: BrowserWindow | null = null
+    private windowHelper: WindowHelper | null = null;
 
     public getSettingsWindow(): BrowserWindow | null {
         return this.settingsWindow
@@ -18,7 +20,6 @@ export class SettingsWindowHelper {
     public getAdvancedWindow(): BrowserWindow | null {
         return this.advancedWindow
     }
-
     public setWindowDimensions(win: BrowserWindow, width: number, height: number): void {
         if (!win || win.isDestroyed() || !win.isVisible()) return
 
@@ -52,6 +53,10 @@ export class SettingsWindowHelper {
         }
     }
 
+    public setWindowHelper(wh: WindowHelper): void {
+        this.windowHelper = wh;
+    }
+
     public toggleWindow(x?: number, y?: number): void {
         const mainWindow = BrowserWindow.getAllWindows().find(w => !w.isDestroyed() && w !== this.settingsWindow && w !== this.advancedWindow);
         if (mainWindow && x !== undefined && y !== undefined) {
@@ -67,7 +72,7 @@ export class SettingsWindowHelper {
             }
 
             if (this.settingsWindow.isVisible()) {
-                this.settingsWindow.hide()
+                this.closeWindow(); // Use closeWindow to handle focus restore
             } else {
                 this.showWindow(x, y)
             }
@@ -82,6 +87,11 @@ export class SettingsWindowHelper {
             return
         }
 
+        // Set parent to ensure it stays on top of the correct window
+        const mainWin = this.windowHelper?.getMainWindow();
+        if (mainWin && !mainWin.isDestroyed()) {
+            this.settingsWindow.setParentWindow(mainWin);
+        }
         if (x !== undefined && y !== undefined) {
             this.settingsWindow.setPosition(Math.round(x), Math.round(y))
         }
@@ -100,7 +110,6 @@ export class SettingsWindowHelper {
         const newY = mainBounds.y + mainBounds.height + this.offsetY;
 
         this.settingsWindow.setPosition(Math.round(newX), Math.round(newY));
-
         // Also update advanced window if visible
         if (this.advancedWindow && this.advancedWindow.isVisible()) {
             const { width } = this.settingsWindow.getBounds();
@@ -114,6 +123,9 @@ export class SettingsWindowHelper {
             this.emitVisibilityChange(false);
         }
         this.closeAdvancedWindow();
+        if (this.windowHelper) {
+            this.windowHelper.restoreFocusToMainWindow();
+        }
     }
 
     public toggleAdvancedWindow(): void {
@@ -292,7 +304,6 @@ export class SettingsWindowHelper {
         if (this.settingsWindow && !this.settingsWindow.isDestroyed()) {
             this.settingsWindow.setContentProtection(enable);
         }
-
         if (this.advancedWindow && !this.advancedWindow.isDestroyed()) {
             this.advancedWindow.setContentProtection(enable);
         }

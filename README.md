@@ -1,25 +1,25 @@
 <div align="center">
-  <img src="assets/icon.png" width="150" alt="Natively Logo">
+  <img src="assets/icon.png" width="150" alt="Natively AI Assistant Logo">
 
-  # Natively – Open Source Cluely Alternative
+  # Natively – Open Source AI Meeting Assistant & Cluely Alternative
 
-  ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-  ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
-  ![GitHub all releases](https://img.shields.io/github/downloads/evinjohnn/natively-cluely-ai-assistant/total)
-  ![Repo Views](https://img.shields.io/badge/views-13.4k-lightgrey)
-  ![Status](https://img.shields.io/badge/status-active-success)
-  [![Stars](https://img.shields.io/github/stars/evinjohnn/natively-cluely-ai-assistant?style=flat)](https://github.com/evinjohnn/natively-cluely-ai-assistant)
-  [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support%20My%20Work-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/evinjohn)
+  [![License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square)](LICENSE)
+  [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey?style=flat-square)](https://github.com/evinjohnn/natively-cluely-ai-assistant/releases)
+  [![Downloads](https://img.shields.io/github/downloads/evinjohnn/natively-cluely-ai-assistant/total?style=flat-square&color=success)](https://github.com/evinjohnn/natively-cluely-ai-assistant/releases)
 
- </div>
+  <br>
+
+  [![Portfolio](https://img.shields.io/badge/Portfolio-evinjohn.vercel.app-blueviolet?style=for-the-badge&logo=vercel&logoColor=white)](https://evinjohn.vercel.app/)
+  [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/evinjohn/)
+  [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/evinjohn)
+
+</div>
 
 ---
-> Natively is a **free, open-source, privacy-first AI assistant** designed to help you **in real time during meetings, interviews, presentations, and conversations**.
 
+> **Natively** is a **free, privacy-first AI Copilot** for **Google Meet, Zoom, and Teams**. It serves as an open-source alternative to Cluely, providing **real-time transcription**, **interview assistance**, and **automated meeting notes** completely locally.
 
-Unlike traditional AI tools that work *after* the conversation, Natively works **while the conversation is happening**. It runs as an **invisible, always-on-top desktop overlay**, listens when you want it to, sees what’s on your screen, and delivers **instant, context-aware assistance**.
-
-Natively is fully transparent, customizable, and gives you complete control over **local vs cloud AI**, your data, and your credentials.
+Unlike cloud-only tools, Natively uses **Local RAG (Retrieval Augmented Generation)** to remember past conversations, giving you instant answers during **technical interviews**, **sales calls**, and **daily standups**.
 
 ---
 
@@ -34,7 +34,7 @@ While other tools focus on being "lightweight" wrappers, Natively is a complete 
 
 ## Demo
 
-![Natively Demo](demo.gif)
+![Natively AI Assistant Demo - Real-time Interview Helper and Transcription](assets/natively-ai-meeting-assistant-demo.gif)
 
 This demo shows **a complete live meeting scenario**:
 - Real-time transcription as the meeting happens  
@@ -159,7 +159,7 @@ You explicitly control:
 **Natively is 100% free to use with your own keys.**  
 Connect **any** speech provider and **any** LLM. No subscriptions, no markups, no hidden fees. All keys are stored locally.
 
-### Supported Speech Providers
+### Unlimited Free Transcription (Whisper, Google, Deepgram)
 - **Google Cloud Speech-to-Text** (Service Account)
 - **Groq** (API Key)
 - **OpenAI Whisper** (API Key)
@@ -276,13 +276,13 @@ npm run dist
 - Instantly hide/show with shortcuts
 - Works across all applications
 
-### Live Meeting Intelligence
+### Real-time Interview Copilot & Coding Help
 - Real-time speech-to-text
-- Rolling context memory
+- Context-aware Memory (RAG) for Past Meetings
 - Instant answers as questions are asked
 - Smart recap and summaries
 
-### Screenshot & Screen Analysis
+### Instant Screen & Slide Analysis (OCR)
 - Capture any screen content
 - Analyze slides, documents, code, or problems
 - Immediate explanations and solutions

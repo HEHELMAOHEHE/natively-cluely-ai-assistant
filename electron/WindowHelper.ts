@@ -294,6 +294,8 @@ export class WindowHelper {
     } else {
       this.switchToLauncher();
     }
+    // Preserve Undetectable state
+    this.setContentProtection(this.appState.getUndetectable());
   }
 
   public toggleMainWindow(): void {

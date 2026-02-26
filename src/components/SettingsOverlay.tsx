@@ -954,8 +954,10 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                             <div
                                                 onClick={() => {
                                                     const newState = !isUndetectable;
+                                                    console.log('[Renderer] SettingsOverlay onClick - toggling to:', newState);
                                                     setIsUndetectable(newState);
-                                                    window.electronAPI?.setUndetectable(newState);
+                                                    // Call setUndetectable on user action
+                                                    window.electronAPI?.setUndetectable?.(newState);
                                                     // Analytics: Undetectable Mode Toggle
                                                     analytics.trackModeSelected(newState ? 'undetectable' : 'overlay');
                                                 }}

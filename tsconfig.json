@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"], // Browser APIs
-    "module": "ESNext", // For Vite/Modern browsers
-    "moduleResolution": "bundler", // For Vite
-    "jsx": "react-jsx", // React specific
-    "noEmit": true, // Vite handles the building
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -13,8 +13,14 @@
     "noUnusedLocals": false,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],               // фронтенд
+      "@electron/*": ["electron/*"]   // main-процесс
+    }
   },
-  "include": ["src"], // Only React source files
+  "include": ["src", "electron"],      // теперь видит оба
   "references": [{ "path": "./tsconfig.node.json" }]
 }

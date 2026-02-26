@@ -130,8 +130,10 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
         }
 
         // Sync initial undetectable state
+        console.log('[Renderer] Launcher: Syncing initial state');
         if (window.electronAPI?.getUndetectable) {
             window.electronAPI.getUndetectable().then((undetectable) => {
+                console.log('[Renderer] Launcher: Got initial state:', undetectable);
                 setIsDetectable(!undetectable);
             });
         }
@@ -140,6 +142,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
         let removeUndetectableListener: (() => void) | undefined;
         if (window.electronAPI?.onUndetectableChanged) {
             removeUndetectableListener = window.electronAPI.onUndetectableChanged((undetectable) => {
+                console.log('[Renderer] Launcher: Received undetectable-changed:', undetectable);
                 setIsDetectable(!undetectable);
             });
         }
@@ -209,9 +212,16 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
 
     const toggleDetectable = () => {
         const newState = !isDetectable;
+        console.log('[Renderer] Launcher onClick - toggling to:', !newState);
         setIsDetectable(newState);
-        window.electronAPI?.setUndetectable(!newState); // Note: setUndetectable takes the *undetectable* state, which is inverse of *detectable*
+        // Call setUndetectable only on user action - not on state change from main process
+        window.electronAPI?.setUndetectable?.(!newState);
         analytics.trackModeSelected(newState ? 'launcher' : 'undetectable'); // If visible (detectable), mode is normal/launcher. If not detectable, mode is undetectable.
+        
+        // Also update content protection when undetectable state changes
+        if (window.electronAPI?.setContentProtection) {
+            window.electronAPI.setContentProtection(!newState);
+        }
     };
 
     // Group meetings

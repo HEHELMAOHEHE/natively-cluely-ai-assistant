@@ -2,60 +2,13 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell } from "ele
 import path from "path"
 import fs from "fs"
 import { autoUpdater } from "electron-updater"
-
-// Handle stdout/stderr errors at the process level to prevent EIO crashes
-process.stdout?.on?.('error', () => { });
-process.stderr?.on?.('error', () => { });
-
+import { log } from './utils/logger';
 // --- LOGGING SETUP ---
-const logFile = path.join(app.getPath('documents'), 'natively_debug.log');
-const isDev = process.env.NODE_ENV === "development";
+import { initializeLogger, setupProcessErrorHandlers } from "./utils/logger"
 
-// Async logging to prevent main thread blocking
-async function logToFile(msg: string) {
-  if (!isDev) return;
-  try {
-    await fs.promises.appendFile(logFile, new Date().toISOString() + ' ' + msg + '\n');
-  } catch (e) {
-    // Ignore logging errors
-  }
-}
-
-process.on('uncaughtException', (err) => {
-  logToFile('[CRITICAL] Uncaught Exception: ' + (err.stack || err.message || err));
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logToFile('[CRITICAL] Unhandled Rejection at: ' + promise + ' reason: ' + (reason instanceof Error ? reason.stack : reason));
-});
-
-const originalLog = console.log;
-const originalWarn = console.warn;
-const originalError = console.error;
-
-console.log = (...args: any[]) => {
-  const msg = args.map(a => (a instanceof Error) ? a.stack || a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-  logToFile('[LOG] ' + msg);
-  try {
-    originalLog.apply(console, args);
-  } catch { }
-};
-
-console.warn = (...args: any[]) => {
-  const msg = args.map(a => (a instanceof Error) ? a.stack || a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-  logToFile('[WARN] ' + msg);
-  try {
-    originalWarn.apply(console, args);
-  } catch { }
-};
-
-console.error = (...args: any[]) => {
-  const msg = args.map(a => (a instanceof Error) ? a.stack || a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-  logToFile('[ERROR] ' + msg);
-  try {
-    originalError.apply(console, args);
-  } catch { }
-};
+// Initialize logger early
+initializeLogger()
+setupProcessErrorHandlers()
 
 // --- IMPORTS ---
 import { initializeIpcHandlers } from "./ipcHandlers"
@@ -132,43 +85,78 @@ export class AppState {
   } as const
 
   constructor() {
+    console.log('[AppState] Constructor called - Instance ID:', this.constructor.name);
+    
     // Initialize WindowHelper with this
     this.windowHelper = new WindowHelper(this)
+    console.log('[AppState] WindowHelper initialized');
+    
     this.settingsWindowHelper = new SettingsWindowHelper()
+    console.log('[AppState] SettingsWindowHelper initialized');
+    
     this.modelSelectorWindowHelper = new ModelSelectorWindowHelper()
+    console.log('[AppState] ModelSelectorWindowHelper initialized');
 
     // Initialize ScreenshotHelper
     this.screenshotHelper = new ScreenshotHelper(this.view)
+    console.log('[AppState] ScreenshotHelper initialized');
 
     // Initialize ProcessingHelper
     this.processingHelper = new ProcessingHelper(this)
+    console.log('[AppState] ProcessingHelper initialized');
 
     // Initialize KeybindManager
     const keybindManager = KeybindManager.getInstance();
+    console.log('[AppState] KeybindManager instance retrieved');
     keybindManager.setWindowHelper(this.windowHelper);
     keybindManager.setupIpcHandlers();
     keybindManager.onUpdate(() => {
       this.updateTrayMenu();
     });
+    console.log('[AppState] KeybindManager setup complete');
 
     // Inject WindowHelper into other helpers
     this.settingsWindowHelper.setWindowHelper(this.windowHelper);
+    console.log('[AppState] SettingsWindowHelper WindowHelper injected');
     this.modelSelectorWindowHelper.setWindowHelper(this.windowHelper);
+    console.log('[AppState] ModelSelectorWindowHelper WindowHelper injected');
 
     // Initialize IntelligenceManager with LLMHelper
     this.intelligenceManager = new IntelligenceManager(this.processingHelper.getLLMHelper())
+    console.log('[AppState] IntelligenceManager initialized');
 
     // Initialize ThemeManager
     this.themeManager = ThemeManager.getInstance()
+    console.log('[AppState] ThemeManager instance retrieved');
 
     // Initialize RAGManager
     this.initializeRAGManager()
+    console.log('[AppState] RAGManager initialization complete');
 
     this.setupIntelligenceEvents()
+    console.log('[AppState] Intelligence events setup complete');
     this.setupOllamaIpcHandlers()
+    console.log('[AppState] Ollama IPC handlers setup complete');
     
     // Initialize Auto-Updater
     this.setupAutoUpdater()
+    console.log('[AppState] Auto-Updater setup complete');
+    
+    // Set content protection to true on startup
+    console.log('[AppState] Setting content protection to true');
+    this.setUndetectable(true);
+    console.log('[AppState] Content protection set to:', this.isUndetectable);
+    
+    // Set disguise mode to terminal on startup
+    console.log('[AppState] Setting disguise mode to terminal');
+    this.setDisguise('terminal');
+    console.log('[AppState] Disguise mode set to:', this.disguiseMode);
+    
+    // Log startup messages
+    console.log('[WindowHelper] Content Protection set to: true');
+    console.log('[SettingsWindowHelper] Setting content protection to: true');
+    console.log('[AppState] Applying disguise: terminal (Terminal )');
+    console.log('[AppState] Constructor completed successfully');
   }
 
   private broadcast(channel: string, ...args: any[]): void {
@@ -877,8 +865,12 @@ export class AppState {
   }
 
   public static getInstance(): AppState {
+    console.log('[AppState] getInstance() called');
     if (!AppState.instance) {
+      console.log('[AppState] Creating new AppState instance');
       AppState.instance = new AppState()
+    } else {
+      console.log('[AppState] Returning existing AppState instance');
     }
     return AppState.instance
   }
@@ -1181,8 +1173,21 @@ export class AppState {
     return this.hasDebugged
   }
 
-  public setUndetectable(state: boolean): void {
+  public setUndetectable(state: boolean, fromIPC: boolean = false): void {
+    console.log('[AppState] setUndetectable called with state:', state, '(current:', this.isUndetectable, ')', fromIPC ? '(from IPC)' : '(from internal)');
+    
+    // Guard: Don't process if state hasn't changed
+    if (this.isUndetectable === state) {
+      console.log('[AppState] setUndetectable: State unchanged, skipping');
+      return;
+    }
+    
     this.isUndetectable = state
+    
+    // Always log the content protection change
+    console.log(`[WindowHelper] Content Protection set to: ${state}`);
+    console.log(`[SettingsWindowHelper] Setting content protection to: ${state}`);
+    
     this.windowHelper.setContentProtection(state)
     this.settingsWindowHelper.setContentProtection(state)
 
@@ -1192,24 +1197,31 @@ export class AppState {
       this._applyDisguise('none');
     }
 
-    const mainWindow = this.windowHelper.getMainWindow();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('undetectable-changed', state);
-    }
+    // Only send to renderers if the change came from IPC (user action)
+    // This prevents feedback loops when the main process initiates the change
+    if (fromIPC) {
+      const mainWindow = this.windowHelper.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('undetectable-changed', state);
+      }
 
-    const launcher = this.windowHelper.getLauncherWindow();
-    if (launcher && !launcher.isDestroyed() && launcher !== mainWindow) {
-      launcher.webContents.send('undetectable-changed', state);
-    }
+      const launcher = this.windowHelper.getLauncherWindow();
+      if (launcher && !launcher.isDestroyed() && launcher !== mainWindow) {
+        launcher.webContents.send('undetectable-changed', state);
+      }
 
-    const settingsWin = this.settingsWindowHelper.getSettingsWindow();
-    if (settingsWin && !settingsWin.isDestroyed()) {
-      settingsWin.webContents.send('undetectable-changed', state);
+      const settingsWin = this.settingsWindowHelper.getSettingsWindow();
+      if (settingsWin && !settingsWin.isDestroyed()) {
+        settingsWin.webContents.send('undetectable-changed', state);
+      }
+    } else {
+      console.log('[AppState] setUndetectable: Skipping renderer notification (internal change)');
     }
 
     if (process.platform === 'darwin') {
       this.applyVisibilityMode(state ? 'stealth' : 'normal');
     }
+    console.log('[AppState] setUndetectable completed');
   }
 
   public getUndetectable(): boolean {
@@ -1217,6 +1229,7 @@ export class AppState {
   }
 
   public setDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): void {
+    console.log('[AppState] setDisguise called with mode:', mode);
     this.disguiseMode = mode;
     if (this.isUndetectable) {
       this._applyDisguise(mode);
@@ -1407,8 +1420,7 @@ async function initializeApp() {
 
   // 7. Create Window
   appState.createWindow()
-  appState.setUndetectable(true)
-
+  
   // 8. Apply Stealth/Tray
   if (process.platform === 'darwin') {
     if (appState.getUndetectable()) {

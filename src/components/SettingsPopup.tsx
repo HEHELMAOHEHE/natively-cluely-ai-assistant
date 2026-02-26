@@ -29,24 +29,6 @@ const SettingsPopup = () => {
     }, []);
 
     useEffect(() => {
-        // Skip initial render if needed, or just allow it to sync once.
-        // We need to differentiate between "user toggled here" and "state came from backend"
-        // But since we are setting state via API, and API broadcasts back, we might get loops?
-        // Actually, if we set state to X, backend broadcasts X. Frontend receives X.
-        // If frontend state is already X, no re-render. So safe.
-
-        if (isFirstUndetectableRender.current) {
-            isFirstUndetectableRender.current = false;
-            return;
-        }
-
-        localStorage.setItem('natively_undetectable', String(isUndetectable));
-        if (window.electronAPI && window.electronAPI.setUndetectable) {
-            window.electronAPI.setUndetectable(isUndetectable);
-        }
-    }, [isUndetectable]);
-
-    useEffect(() => {
         // Listen for changes from other windows (2-way sync)
         if (window.electronAPI?.onGroqFastTextChanged) {
             const unsubscribe = window.electronAPI.onGroqFastTextChanged((enabled: boolean) => {

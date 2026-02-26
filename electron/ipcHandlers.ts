@@ -356,7 +356,17 @@ export function initializeIpcHandlers(appState: AppState): void {
 
 
   safeHandle("set-undetectable", async (_, state: boolean) => {
-    appState.setUndetectable(state)
+    // Add stack trace to debug where calls are coming from
+    console.log('[IPC] set-undetectable called with state:', state, '- Stack:', new Error().stack);
+    
+    // Prevent redundant IPC calls - only process if state actually changes
+    const currentState = appState.getUndetectable();
+    if (currentState === state) {
+      console.log('[IPC] set-undetectable: State unchanged, ignoring');
+      return { success: true, state: currentState };
+    }
+    
+    appState.setUndetectable(state, true) // true = fromIPC
     return { success: true }
   })
 

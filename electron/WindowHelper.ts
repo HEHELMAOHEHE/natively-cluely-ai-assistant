@@ -12,8 +12,9 @@ console.log(`[WindowHelper] isEnvDev: ${isEnvDev}, isPackaged: ${isPackaged}, in
 // Force production mode if running as packaged app or inside app bundle
 const isDev = isEnvDev && !isPackaged;
 
+const rendererUrl = process.env.RENDERER_URL || "http://localhost:5180";
 const startUrl = isDev
-  ? "http://localhost:5180"
+  ? rendererUrl
   : `file://${path.join(__dirname, "../dist/index.html")}`
 
 export class WindowHelper {
@@ -160,7 +161,7 @@ export class WindowHelper {
       return;
     }
 
-    this.launcherWindow.setContentProtection(false)
+    this.launcherWindow.setContentProtection(this.appState.getUndetectable())
 
     this.launcherWindow.loadURL(`${startUrl}?window=launcher`)
       .then(() => console.log('[WindowHelper] loadURL success'))
@@ -199,7 +200,7 @@ export class WindowHelper {
     }
 
     this.overlayWindow = new BrowserWindow(overlaySettings)
-    this.overlayWindow.setContentProtection(false)
+    this.overlayWindow.setContentProtection(this.appState.getUndetectable())
 
     if (process.platform === "darwin") {
       this.overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })

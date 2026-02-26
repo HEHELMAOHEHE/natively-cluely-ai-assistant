@@ -12,7 +12,7 @@ export interface KeybindConfig {
 
 export const DEFAULT_KEYBINDS: KeybindConfig[] = [
     // General
-    { id: 'general:toggle-visibility', label: 'Toggle Visibility', accelerator: 'CommandOrControl+B', isGlobal: false, defaultAccelerator: 'CommandOrControl+B' },
+    { id: 'general:toggle-visibility', label: 'Toggle Visibility', accelerator: 'CommandOrControl+B', isGlobal: true, defaultAccelerator: 'CommandOrControl+B' },
     { id: 'general:process-screenshots', label: 'Process Screenshots', accelerator: 'CommandOrControl+Enter', isGlobal: false, defaultAccelerator: 'CommandOrControl+Enter' },
     { id: 'general:reset-cancel', label: 'Reset / Cancel', accelerator: 'CommandOrControl+R', isGlobal: false, defaultAccelerator: 'CommandOrControl+R' },
     { id: 'general:take-screenshot', label: 'Take Screenshot', accelerator: 'CommandOrControl+H', isGlobal: false, defaultAccelerator: 'CommandOrControl+H' },
@@ -28,10 +28,10 @@ export const DEFAULT_KEYBINDS: KeybindConfig[] = [
     { id: 'chat:scrollDown', label: 'Scroll Down', accelerator: 'CommandOrControl+Down', isGlobal: false, defaultAccelerator: 'CommandOrControl+Down' },
 
     // Window Movement
-    { id: 'window:move-up', label: 'Move Window Up', accelerator: 'CommandOrControl+Up', isGlobal: false, defaultAccelerator: 'CommandOrControl+Up' },
-    { id: 'window:move-down', label: 'Move Window Down', accelerator: 'CommandOrControl+Down', isGlobal: false, defaultAccelerator: 'CommandOrControl+Down' },
-    { id: 'window:move-left', label: 'Move Window Left', accelerator: 'CommandOrControl+Left', isGlobal: false, defaultAccelerator: 'CommandOrControl+Left' },
-    { id: 'window:move-right', label: 'Move Window Right', accelerator: 'CommandOrControl+Right', isGlobal: false, defaultAccelerator: 'CommandOrControl+Right' },
+    { id: 'window:move-up', label: 'Move Window Up', accelerator: 'CommandOrControl+Alt+Up', isGlobal: true, defaultAccelerator: 'CommandOrControl+Alt+Up' },
+    { id: 'window:move-down', label: 'Move Window Down', accelerator: 'CommandOrControl+Alt+Down', isGlobal: true, defaultAccelerator: 'CommandOrControl+Alt+Down' },
+    { id: 'window:move-left', label: 'Move Window Left', accelerator: 'CommandOrControl+Alt+Left', isGlobal: true, defaultAccelerator: 'CommandOrControl+Alt+Left' },
+    { id: 'window:move-right', label: 'Move Window Right', accelerator: 'CommandOrControl+Alt+Right', isGlobal: true, defaultAccelerator: 'CommandOrControl+Alt+Right' },
 ];
 
 export class KeybindManager {
@@ -40,6 +40,7 @@ export class KeybindManager {
     private filePath: string;
     private windowHelper: any; // Type avoided for circular dep, passed in init
     private onUpdateCallbacks: (() => void)[] = [];
+    private registeredGlobalShortcuts: Set<string> = new Set();
 
     private constructor() {
         this.filePath = path.join(app.getPath('userData'), 'keybinds.json');
@@ -105,16 +106,54 @@ export class KeybindManager {
         return Array.from(this.keybinds.values());
     }
 
-    public setKeybind(id: string, accelerator: string) {
-        if (!this.keybinds.has(id)) return;
+    private normalizeAccelerator(accelerator: string): string {
+        return (accelerator || '')
+            .split('+')
+            .map(part => part.trim())
+            .filter(Boolean)
+            .map(part => {
+                const lower = part.toLowerCase();
+                if (lower === 'cmdorctrl' || lower === 'commandorcontrol') return 'CommandOrControl';
+                if (lower === 'ctrl' || lower === 'control') return 'Control';
+                if (lower === 'cmd' || lower === 'command' || lower === 'meta') return 'Command';
+                if (lower === 'option' || lower === 'alt') return 'Alt';
+                if (lower === 'arrowup') return 'Up';
+                if (lower === 'arrowdown') return 'Down';
+                if (lower === 'arrowleft') return 'Left';
+                if (lower === 'arrowright') return 'Right';
+                if (part.length === 1) return part.toUpperCase();
+                return part;
+            })
+            .join('+');
+    }
+
+    private hasDuplicateAccelerator(id: string, accelerator: string): boolean {
+        const normalized = this.normalizeAccelerator(accelerator).toLowerCase();
+        for (const [existingId, kb] of this.keybinds.entries()) {
+            if (existingId === id) continue;
+            if (this.normalizeAccelerator(kb.accelerator).toLowerCase() === normalized) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public setKeybind(id: string, accelerator: string): boolean {
+        if (!this.keybinds.has(id)) return false;
+
+        const normalized = this.normalizeAccelerator(accelerator);
+        if (!normalized || this.hasDuplicateAccelerator(id, normalized)) {
+            return false;
+        }
 
         const kb = this.keybinds.get(id)!;
-        kb.accelerator = accelerator;
+        kb.accelerator = normalized;
         this.keybinds.set(id, kb);
 
         this.save();
         this.registerGlobalShortcuts(); // Re-register if it was a global one
         this.broadcastUpdate();
+        return true;
     }
 
     public resetKeybinds() {
@@ -126,10 +165,37 @@ export class KeybindManager {
     }
 
     public registerGlobalShortcuts() {
-        globalShortcut.unregisterAll();
+        for (const accelerator of this.registeredGlobalShortcuts) {
+            try {
+                globalShortcut.unregister(accelerator);
+            } catch {
+                // ignore
+            }
+        }
+        this.registeredGlobalShortcuts.clear();
 
-        // Register any other global shortcuts if they exist in the future
-        // Currently, we have removed the only global shortcut (toggle-app)
+        const register = (id: string, handler: () => void) => {
+            const kb = this.keybinds.get(id);
+            if (!kb || !kb.isGlobal || !kb.accelerator) return;
+            const accelerator = this.normalizeAccelerator(kb.accelerator);
+            try {
+                globalShortcut.register(accelerator, handler);
+                const ok = globalShortcut.isRegistered(accelerator);
+                if (ok) {
+                    this.registeredGlobalShortcuts.add(accelerator);
+                } else {
+                    console.warn(`[KeybindManager] Failed to register global shortcut: ${id} (${accelerator})`);
+                }
+            } catch (error) {
+                console.warn(`[KeybindManager] Invalid global shortcut: ${id} (${accelerator})`, error);
+            }
+        };
+
+        register('general:toggle-visibility', () => this.windowHelper?.toggleMainWindow());
+        register('window:move-up', () => this.windowHelper?.moveWindowUp());
+        register('window:move-down', () => this.windowHelper?.moveWindowDown());
+        register('window:move-left', () => this.windowHelper?.moveWindowLeft());
+        register('window:move-right', () => this.windowHelper?.moveWindowRight());
 
         this.updateMenu();
     }
@@ -243,8 +309,7 @@ export class KeybindManager {
 
         ipcMain.handle('keybinds:set', (_, id: string, accelerator: string) => {
             console.log(`[KeybindManager] Set ${id} -> ${accelerator}`);
-            this.setKeybind(id, accelerator);
-            return true;
+            return this.setKeybind(id, accelerator);
         });
 
         ipcMain.handle('keybinds:reset', () => {

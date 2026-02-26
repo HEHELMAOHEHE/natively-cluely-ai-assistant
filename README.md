@@ -261,8 +261,23 @@ DEFAULT_MODEL=gemini-3-flash-preview
 ```
 
 ### Run (Development)
+Start both together:
 ```bash
 npm start
+```
+
+Run separately (in two terminals):
+```bash
+# Terminal 1: Renderer/Backend (Vite)
+npm run backend:dev
+
+# Terminal 2: Electron main process
+npm run electron:dev:only
+```
+
+If your Vite server runs on another port, pass it to Electron:
+```bash
+RENDERER_URL=http://localhost:5173 npm run electron:dev
 ```
 
 ### Build (Production)

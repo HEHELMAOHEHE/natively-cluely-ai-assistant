@@ -2,9 +2,8 @@
 
 import path from "node:path"
 import fs from "node:fs"
-import { app } from "electron"
+import { app, desktopCapturer, screen } from "electron"
 import { v4 as uuidv4 } from "uuid"
-import screenshot from "screenshot-desktop"
 import util from "util"
 export class ScreenshotHelper {
   private screenshotQueue: string[] = []
@@ -55,6 +54,28 @@ export class ScreenshotHelper {
       return `powershell -NoProfile -Command "${psScript}"`;
     }
     throw new Error(`Unsupported platform for screenshots: ${platform}`);
+  }
+
+  private async captureWithElectron(outputPath: string): Promise<void> {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.size;
+    const scaleFactor = primaryDisplay.scaleFactor;
+
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: {
+        width: Math.floor(width * scaleFactor),
+        height: Math.floor(height * scaleFactor)
+      }
+    });
+
+    if (sources.length === 0) {
+      throw new Error("No screen sources found");
+    }
+
+    const screenshot = sources[0].thumbnail;
+    const pngBuffer = screenshot.toPNG();
+    await fs.promises.writeFile(outputPath, pngBuffer);
   }
 
   public getView(): "queue" | "solutions" {
@@ -114,10 +135,11 @@ export class ScreenshotHelper {
 
       if (this.view === "queue") {
         screenshotPath = path.join(this.screenshotDir, `${uuidv4()}.png`)
-        // Use native screencapture for reliability on macOS
-        // -x: do not play sound
-        // -C: capture cursor
-        await exec(this.getScreenshotCommand(screenshotPath, false))
+        if (process.platform === "win32") {
+          await this.captureWithElectron(screenshotPath)
+        } else {
+          await exec(this.getScreenshotCommand(screenshotPath, false))
+        }
 
         this.screenshotQueue.push(screenshotPath)
         if (this.screenshotQueue.length > this.MAX_SCREENSHOTS) {
@@ -132,7 +154,11 @@ export class ScreenshotHelper {
         }
       } else {
         screenshotPath = path.join(this.extraScreenshotDir, `${uuidv4()}.png`)
-        await exec(this.getScreenshotCommand(screenshotPath, false))
+        if (process.platform === "win32") {
+          await this.captureWithElectron(screenshotPath)
+        } else {
+          await exec(this.getScreenshotCommand(screenshotPath, false))
+        }
 
         this.extraScreenshotQueue.push(screenshotPath)
         if (this.extraScreenshotQueue.length > this.MAX_SCREENSHOTS) {
@@ -173,13 +199,19 @@ export class ScreenshotHelper {
       // Always use the standard queue directory for this temporary context
       screenshotPath = path.join(this.screenshotDir, `selective-${uuidv4()}.png`)
 
-      // -i: interactive mode (selection)
-      // -x: do not play sound
       try {
-        await exec(this.getScreenshotCommand(screenshotPath, true))
+        if (process.platform === "win32") {
+          // Windows fallback: capture full screen via Electron API.
+          await this.captureWithElectron(screenshotPath)
+        } else {
+          await exec(this.getScreenshotCommand(screenshotPath, true))
+        }
       } catch (e: any) {
-        // User cancelled selection (exit code 1 usually)
-        throw new Error("Selection cancelled")
+        if (process.platform !== "win32") {
+          // User cancelled selection (exit code 1 usually)
+          throw new Error("Selection cancelled")
+        }
+        throw e
       }
 
       // Verify file exists (user might have pressed Esc)

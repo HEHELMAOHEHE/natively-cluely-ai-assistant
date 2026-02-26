@@ -31,10 +31,10 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig = {
     answer: ['⌘', '5'],
     scrollUp: ['↑'],
     scrollDown: ['↓'],
-    moveWindowUp: ['⌘', '↑'],
-    moveWindowDown: ['⌘', '↓'],
-    moveWindowLeft: ['⌘', '←'],
-    moveWindowRight: ['⌘', '→'],
+    moveWindowUp: ['⌘', '⌥', '↑'],
+    moveWindowDown: ['⌘', '⌥', '↓'],
+    moveWindowLeft: ['⌘', '⌥', '←'],
+    moveWindowRight: ['⌘', '⌥', '→'],
     toggleVisibility: ['⌘', 'B'],
     processScreenshots: ['⌘', 'Enter'],
     resetCancel: ['⌘', 'R'],
@@ -130,13 +130,17 @@ export const useShortcuts = () => {
 
         if (backendId) {
             try {
-                await window.electronAPI.setKeybind(backendId, accelerator);
+                const ok = await window.electronAPI.setKeybind(backendId, accelerator);
+                if (!ok) {
+                    const latest = await window.electronAPI.getKeybinds();
+                    mapBackendToFrontend(latest);
+                }
             } catch (error) {
                 console.error(`Failed to set keybind for ${actionId}:`, error);
                 // Revert optimistic update if needed? For now, we rely on the next update from backend or refresh.
             }
         }
-    }, []);
+    }, [mapBackendToFrontend]);
 
     // Function to reset all shortcuts to defaults
     const resetShortcuts = useCallback(async () => {

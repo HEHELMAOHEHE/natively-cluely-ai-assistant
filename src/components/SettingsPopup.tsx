@@ -14,6 +14,12 @@ const SettingsPopup = () => {
 
     // Sync with global state changes
     useEffect(() => {
+        if (window.electronAPI?.getUndetectable) {
+            window.electronAPI.getUndetectable().then((state: boolean) => {
+                setIsUndetectable(state);
+            }).catch(() => { });
+        }
+
         if (window.electronAPI?.onUndetectableChanged) {
             const unsubscribe = window.electronAPI.onUndetectableChanged((newState: boolean) => {
                 setIsUndetectable(newState);

@@ -324,6 +324,7 @@ export class WindowHelper {
     const shouldBeProtected = this.appState.getUndetectable();
     if (shouldBeProtected) {
       setImmediate(() => {
+        log.info('[WindowHelper] Applying content protection after setImmediate');
         this.setContentProtection(shouldBeProtected);
       });
     }
@@ -372,6 +373,13 @@ export class WindowHelper {
     log.info('[WindowHelper] Switching to OVERLAY');
     this.currentWindowMode = 'overlay';
 
+    // Apply content protection when switching to overlay
+    const shouldBeProtected = this.appState.getUndetectable();
+    if (shouldBeProtected) {
+      log.info('[WindowHelper] Applying content protection in switchToOverlay');
+      this.setContentProtection(true);
+    }
+
     // Show Overlay FIRST
     if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
       // Reset overlay position to center or last known? 
@@ -399,6 +407,13 @@ export class WindowHelper {
   public switchToLauncher(): void {
     log.info('[WindowHelper] Switching to LAUNCHER');
     this.currentWindowMode = 'launcher';
+
+    // Apply content protection when switching to launcher
+    const shouldBeProtected = this.appState.getUndetectable();
+    if (shouldBeProtected) {
+      log.info('[WindowHelper] Applying content protection in switchToLauncher');
+      this.setContentProtection(true);
+    }
 
     // Show Launcher FIRST
     if (this.launcherWindow && !this.launcherWindow.isDestroyed()) {

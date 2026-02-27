@@ -1461,8 +1461,8 @@ async function initializeApp() {
     }
   }
 
-  // 9. Shortcuts
-  KeybindManager.getInstance().registerGlobalShortcuts()
+  // Note: Global shortcuts are already registered in keybindManager.setWindowHelper()
+  // KeybindManager.getInstance().registerGlobalShortcuts()
 
   // 10. Preload Settings
   appState.settingsWindowHelper.preloadWindow()

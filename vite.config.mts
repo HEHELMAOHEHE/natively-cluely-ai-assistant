@@ -1,10 +1,63 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import electron from 'vite-plugin-electron';
+import renderer from 'vite-plugin-electron-renderer';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    electron([
+      {
+        entry: 'electron/main.ts',
+        onstart(options) {
+          options.startup();
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            minify: false,
+            rollupOptions: {
+              external: [
+                'electron',
+                'electron-log',
+                'better-sqlite3',
+                'keytar',
+                'natively-audio-win32-x64-msvc',
+                'bufferutil',
+                'utf-8-validate',
+                'ws',
+                'sharp',
+                '@img/sharp-win32-x64'
+              ]
+            }
+          },
+          resolve: {
+            alias: {
+              '@utils/logger': path.resolve(__dirname, 'electron/utils/logger.ts')
+            }
+          }
+        }
+      },
+      {
+        entry: 'electron/preload.ts',
+        onstart(options) {
+          options.reload();
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            minify: false,
+            rollupOptions: {
+              external: ['electron']
+            }
+          }
+        }
+      }
+    ]),
+    renderer()
+  ],
   base: './', // Относительные пути для Electron
   define: {
     __dirname: 'undefined',

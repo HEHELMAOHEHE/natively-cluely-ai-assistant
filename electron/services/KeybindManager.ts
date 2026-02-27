@@ -225,13 +225,14 @@ private normalizeAccelerator(accelerator: string): string {
 
     // --- MENU ---
     public updateMenu() {
-        const toggleAccelerator = this.getKeybind('general:toggle-visibility') || 'CommandOrControl+B';
         const template: any[] = [
             { label: app.name, submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'quit' }] },
             {
                 label: 'View',
                 submenu: [
-                    { label: 'Toggle Visibility', accelerator: toggleAccelerator, click: () => this.windowHelper?.toggleMainWindow() },
+                    // Note: Toggle Visibility is handled by globalShortcut, not menu accelerator
+                    // This prevents double-trigger when pressing Ctrl+B
+                    { label: 'Toggle Visibility', click: () => this.windowHelper?.toggleMainWindow() },
                     { type: 'separator' },
                     { label: 'Move Window Up', accelerator: this.getKeybind('window:move-up'), click: () => this.windowHelper?.moveWindowUp() },
                     { label: 'Move Window Down', accelerator: this.getKeybind('window:move-down'), click: () => this.windowHelper?.moveWindowDown() },

@@ -241,21 +241,21 @@ cd natively-cluely-ai-assistant
 
 ### Install Dependencies
 ```bash
-npm install
+bun install
 ```
 
 ### Build Native Audio Module
 Natively uses a Rust-based native module for high-performance audio capture. You must build it before running the app for the first time:
 ```bash
-npm run build:native
+bun run build:native
 ```
 > [!TIP]
 > You only need to re-run this if you modify the code inside the `native-module/` directory.
 
 ### Troubleshooting Native Modules
-If you encounter `ERR_DLOPEN_FAILED` or issues with `better-sqlite3` after `npm install`, run:
+If you encounter `ERR_DLOPEN_FAILED` or issues with `better-sqlite3` after `bun install`, run:
 ```bash
-npx electron-rebuild -w better-sqlite3
+bunx electron-rebuild
 ```
 
 ### Building Native Audio Module (Optional)
@@ -264,11 +264,11 @@ The app includes an optional native audio module for system audio capture. To en
 **Windows:**
 1. Install Rust: https://rustup.rs/
 2. Install Visual Studio Build Tools with C++ workload
-3. Run: `npm run build:native`
+3. Run: `bun run build:native`
 
 **macOS/Linux:**
 1. Rust is automatically installed if missing (via rustup)
-2. Run: `npm run build:native`
+2. Run: `bun run build:native`
 
 Without this module, the app will work but system audio capture features will be unavailable.
 
@@ -303,26 +303,26 @@ DEFAULT_MODEL=gemini-3-flash-preview
 ### Run (Development)
 Start both together:
 ```bash
-npm start
+bun start
 ```
 
 Run separately (in two terminals):
 ```bash
 # Terminal 1: Renderer/Backend (Vite)
-npm run backend:dev
+bun run backend:dev
 
 # Terminal 2: Electron main process
-npm run electron:dev:only
+bun run electron:dev:only
 ```
 
 If your Vite server runs on another port, pass it to Electron:
 ```bash
-RENDERER_URL=http://localhost:5173 npm run electron:dev
+RENDERER_URL=http://localhost:5173 bun run electron:dev
 ```
 
 ### Build (Production)
 ```bash
-npm run dist
+bun run dist
 ```
 
 ---

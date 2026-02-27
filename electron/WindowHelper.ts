@@ -320,7 +320,13 @@ export class WindowHelper {
   }
 
   public showMainWindow(): void {
-    log.info(`[WindowHelper] showMainWindow called, isUndetectable: ${this.appState.getUndetectable()}`);
+    // Apply content protection with minimal delay to let window render first
+    const shouldBeProtected = this.appState.getUndetectable();
+    if (shouldBeProtected) {
+      setImmediate(() => {
+        this.setContentProtection(shouldBeProtected);
+      });
+    }
     
     // Show the window first
     if (this.currentWindowMode === 'overlay') {
@@ -328,10 +334,8 @@ export class WindowHelper {
     } else {
       this.switchToLauncher();
     }
+    log.info(`[WindowHelper] showMainWindow called, isUndetectable: ${this.appState.getUndetectable()}`);
     
-    // Apply content protection after showing window
-    const shouldBeProtected = this.appState.getUndetectable();
-    this.setContentProtection(shouldBeProtected);
   }
 
   public toggleMainWindow(): void {

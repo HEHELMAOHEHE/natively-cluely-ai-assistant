@@ -258,6 +258,20 @@ If you encounter `ERR_DLOPEN_FAILED` or issues with `better-sqlite3` after `npm 
 npx electron-rebuild -w better-sqlite3
 ```
 
+### Building Native Audio Module (Optional)
+The app includes an optional native audio module for system audio capture. To enable it:
+
+**Windows:**
+1. Install Rust: https://rustup.rs/
+2. Install Visual Studio Build Tools with C++ workload
+3. Run: `npm run build:native`
+
+**macOS/Linux:**
+1. Rust is automatically installed if missing (via rustup)
+2. Run: `npm run build:native`
+
+Without this module, the app will work but system audio capture features will be unavailable.
+
 ### Environment Variables
 Create a `.env` file:
 

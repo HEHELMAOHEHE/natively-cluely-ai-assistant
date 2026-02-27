@@ -245,7 +245,6 @@ export class AppState {
 
         // Embedding function using Gemini embeddings API
         const { GoogleGenAI } = require('@google/genai');
-        const { CredentialsManager } = require('./services/CredentialsManager');
         const cm = CredentialsManager.getInstance();
         const geminiKey = cm.getGeminiApiKey() || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (geminiKey) {

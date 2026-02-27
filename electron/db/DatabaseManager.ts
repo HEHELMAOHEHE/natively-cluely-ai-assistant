@@ -1,8 +1,8 @@
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
+import { log } from '../utils/logger';
 
 // Interfaces for our data objects
 export interface Meeting {
@@ -54,6 +54,20 @@ export class DatabaseManager {
     private init() {
         try {
             console.log(`[DatabaseManager] Initializing database at ${this.dbPath}`);
+            
+            // Diagnostic: Log Node.js/Electron version info
+            console.log(`[DatabaseManager] Process version: ${process.version}`);
+            console.log(`[DatabaseManager] Process arch: ${process.arch}`);
+            console.log(`[DatabaseManager] ELECTRON_RUN_AS_NODE: ${process.env.ELECTRON_RUN_AS_NODE}`);
+            
+            // Try to require better-sqlite3 to check if it loads correctly
+            try {
+                const betterSqlite3Path = require.resolve('better-sqlite3');
+                console.log(`[DatabaseManager] better-sqlite3 path: ${betterSqlite3Path}`);
+            } catch (e) {
+                console.error(`[DatabaseManager] Error resolving better-sqlite3:`, e);
+            }
+            
             // Ensure directory exists (though userData usually does)
             const dir = path.dirname(this.dbPath);
             if (!fs.existsSync(dir)) {
@@ -78,8 +92,32 @@ export class DatabaseManager {
 
             this.db = new Database(this.dbPath);
             this.runMigrations();
-        } catch (error) {
+        } catch (error: any) {
             console.error('[DatabaseManager] Failed to initialize database:', error);
+            
+            // Check if it's a native module version mismatch error
+            if (error.code === 'ERR_DLOPEN_FAILED' || error.message?.includes('NODE_MODULE_VERSION')) {
+                console.error('[DatabaseManager] Native module version mismatch detected. Attempting to rebuild...');
+                
+                try {
+                    // Try to rebuild the native module
+                    const { execSync } = require('child_process');
+                    execSync('npx electron-rebuild -f -w better-sqlite3', {
+                        stdio: 'inherit',
+                        cwd: require('path').join(__dirname, '..', '..')
+                    });
+                    console.log('[DatabaseManager] Rebuild complete. Retrying database initialization...');
+                    
+                    // Retry initialization
+                    this.db = new Database(this.dbPath);
+                    this.runMigrations();
+                    console.log('[DatabaseManager] Database initialized successfully after rebuild!');
+                    return;
+                } catch (rebuildError) {
+                    console.error('[DatabaseManager] Failed to rebuild native module:', rebuildError);
+                }
+            }
+            
             throw error;
         }
     }
@@ -560,7 +598,7 @@ export class DatabaseManager {
         // Check if demo meeting already exists
         const existing = this.db.prepare('SELECT id FROM meetings WHERE id = ?').get('demo-meeting');
         if (existing) {
-            console.log('[DatabaseManager] Demo meeting already exists, skipping seed.');
+            log.info('[DatabaseManager] Demo meeting already exists, skipping seed.');
             return;
         }
 

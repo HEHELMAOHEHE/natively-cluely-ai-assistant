@@ -1,5 +1,5 @@
 import { log } from '@utils/logger';
-import React, { useState, useEffect } from "react" // forcing refresh
+import React, { useState, useEffect, useRef } from "react" // forcing refresh
 import { QueryClient, QueryClientProvider } from "react-query"
 import { ToastProvider, ToastViewport } from "./components/ui/toast"
 import NativelyInterface from "./components/NativelyInterface"
@@ -63,8 +63,15 @@ const App: React.FC = () => {
     );
   }
 
+  // Track analytics initialization to prevent duplicates from React StrictMode
+  const analyticsInitialized = useRef(false);
+
   // Initialize Analytics
   useEffect(() => {
+    // Prevent duplicate initialization from StrictMode
+    if (analyticsInitialized.current) return;
+    analyticsInitialized.current = true;
+    
     // Only init if we are in a main window context to avoid duplicate events from helper windows
     // Actually, we probably want to track app open from the main entry point.
     // Let's protect initialization to ensure single run per window.

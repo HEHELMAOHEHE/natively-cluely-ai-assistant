@@ -8,7 +8,7 @@ interface ConnectCalendarButtonProps extends React.ButtonHTMLAttributes<HTMLButt
     onConnect?: () => void;
 }
 
-const ConnectCalendarButton: React.FC<ConnectCalendarButtonProps> = ({ className = '', variant = 'default', ...props }) => {
+const ConnectCalendarButton: React.FC<ConnectCalendarButtonProps> = ({ className = '', variant = 'default', onConnect, ...props }) => {
     const [loading, setLoading] = useState(false);
     const [connected, setConnected] = useState(false);
 
@@ -17,7 +17,7 @@ const ConnectCalendarButton: React.FC<ConnectCalendarButtonProps> = ({ className
             window.electronAPI.getCalendarStatus().then(status => {
                 setConnected(status.connected);
                 if (status.connected) {
-                    props.onConnect?.();
+                    onConnect?.();
                 }
             });
         }
@@ -32,7 +32,7 @@ const ConnectCalendarButton: React.FC<ConnectCalendarButtonProps> = ({ className
             const res = await window.electronAPI.calendarConnect();
             if (res.success) {
                 setConnected(true);
-                props.onConnect?.();
+                onConnect?.();
                 // Track calendar connection
                 import('../../lib/analytics/analytics.service').then(({ analytics }) => {
                     analytics.trackCalendarConnected();

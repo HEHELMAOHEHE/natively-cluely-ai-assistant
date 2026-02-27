@@ -130,11 +130,11 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
             window.electronAPI.invoke('seed-demo').catch(err => log.error("Failed to seed demo:", err));
         }
 
-        // Sync initial undetectable state
-        log.info('[Renderer] Launcher: Syncing initial state');
+        // Sync initial state
+        log.info('Launcher: Syncing initial state');
         if (window.electronAPI?.getUndetectable) {
             window.electronAPI.getUndetectable().then((undetectable) => {
-                log.info('[Renderer] Launcher: Got initial state:', undetectable);
+                log.info('Launcher: Got initial state:', undetectable);
                 setIsDetectable(!undetectable);
             });
         }
@@ -143,7 +143,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
         let removeUndetectableListener: (() => void) | undefined;
         if (window.electronAPI?.onUndetectableChanged) {
             removeUndetectableListener = window.electronAPI.onUndetectableChanged((undetectable) => {
-                log.info('[Renderer] Launcher: Received undetectable-changed:', undetectable);
+                log.info('Launcher: Received undetectable-changed:', undetectable);
                 setIsDetectable(!undetectable);
             });
         }
@@ -203,7 +203,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
 
     const toggleDetectable = () => {
         const newState = !isDetectable;
-        log.info('[Renderer] Launcher onClick - toggling to:', !newState);
+        log.info('Launcher onClick - toggling to:', !newState);
         setIsDetectable(newState);
         // Call setUndetectable only on user action - not on state change from main process
         window.electronAPI?.setUndetectable?.(!newState);

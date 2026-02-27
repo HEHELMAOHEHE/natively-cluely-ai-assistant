@@ -47,7 +47,8 @@ interface SessionDurationPayload {
 
 // --- Configuration ---
 
-const GA4_MEASUREMENT_ID = "G-494RMJ2G6E";
+// Disable analytics for native Electron app - no need for tracking
+const GA4_MEASUREMENT_ID = "";
 const APP_VERSION = "1.1.3";
 
 // Extend window to include gtag/dataLayer

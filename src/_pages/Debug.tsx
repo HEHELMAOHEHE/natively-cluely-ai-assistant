@@ -1,7 +1,7 @@
 import { log } from '@utils/logger';
 // Debug.tsx
 import React, { useState, useEffect, useRef } from "react"
-import { useQuery, useQueryClient } from "react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { ComplexitySection, ContentSection } from "./Solutions"
@@ -238,7 +238,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       }
     },
     staleTime: Infinity,
-    cacheTime: Infinity
+    gcTime: Infinity
   })
 
   const showToast = (

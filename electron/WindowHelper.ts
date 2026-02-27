@@ -177,7 +177,7 @@ export class WindowHelper {
       // Capture console logs from renderer
       this.launcherWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
         const levelStr = ['verbose', 'info', 'warn', 'error'][level] || 'info';
-        log.info(`[Renderer Console ${levelStr}]: ${message}`);
+        log.info(`[Console ${levelStr}]: ${message}`);
       });
     } catch (err) {
       log.error('[WindowHelper] Failed to create BrowserWindow:', err);

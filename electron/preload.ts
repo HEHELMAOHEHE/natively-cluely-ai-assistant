@@ -170,6 +170,20 @@ interface ElectronAPI {
   getDonationStatus: () => Promise<{ shouldShow: boolean; hasDonated: boolean; lifetimeShows: number }>;
   markDonationToastShown: () => Promise<{ success: boolean }>;
   setDonationComplete: () => Promise<{ success: boolean }>;
+
+  // Profile Engine API
+  profileUploadResume: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  profileGetStatus: () => Promise<{ hasProfile: boolean; profileMode: boolean; name?: string; role?: string; totalExperienceYears?: number }>;
+  profileSetMode: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+  profileDelete: () => Promise<{ success: boolean; error?: string }>;
+  profileGetProfile: () => Promise<any>;
+  profileSelectFile: () => Promise<{ success?: boolean; cancelled?: boolean; filePath?: string; error?: string }>;
+
+  // JD & Research API
+  profileUploadJD: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  profileDeleteJD: () => Promise<{ success: boolean; error?: string }>;
+  profileResearchCompany: (companyName: string) => Promise<{ success: boolean; dossier?: any; error?: string }>;
+  profileGenerateNegotiation: () => Promise<{ success: boolean; dossier?: any; profileData?: any; error?: string }>;
 }
 
 export const PROCESSING_EVENTS = {
@@ -741,4 +755,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getDonationStatus: () => ipcRenderer.invoke("get-donation-status"),
   markDonationToastShown: () => ipcRenderer.invoke("mark-donation-toast-shown"),
   setDonationComplete: () => ipcRenderer.invoke('set-donation-complete'),
+
+  // Profile Engine API
+  profileUploadResume: (filePath: string) => ipcRenderer.invoke('profile:upload-resume', filePath),
+  profileGetStatus: () => ipcRenderer.invoke('profile:get-status'),
+  profileSetMode: (enabled: boolean) => ipcRenderer.invoke('profile:set-mode', enabled),
+  profileDelete: () => ipcRenderer.invoke('profile:delete'),
+  profileGetProfile: () => ipcRenderer.invoke('profile:get-profile'),
+  profileSelectFile: () => ipcRenderer.invoke('profile:select-file'),
+
+  // JD & Research API
+  profileUploadJD: (filePath: string) => ipcRenderer.invoke('profile:upload-jd', filePath),
+  profileDeleteJD: () => ipcRenderer.invoke('profile:delete-jd'),
+  profileResearchCompany: (companyName: string) => ipcRenderer.invoke('profile:research-company', companyName),
+  profileGenerateNegotiation: () => ipcRenderer.invoke('profile:generate-negotiation'),
 } as ElectronAPI)

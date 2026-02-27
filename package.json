@@ -1,6 +1,6 @@
 {
   "name": "natively",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "main": "./dist-electron/main.js",
   "description": "Natively is a meeting notes app that uses AI to generate notes from your meetings.",
   "scripts": {
@@ -19,20 +19,20 @@
     "watch": "tsc -p electron/tsconfig.json --watch",
     "start": "npm run app:dev",
     "dist": "npm run app:build",
-    "build:native": "napi build --platform --release native-module"
+    "build:native": "cd native-module && npx napi build --platform --release"
   },
   "build": {
     "appId": "com.electron.meeting-notes",
     "afterPack": "./scripts/ad-hoc-sign.js",
     "productName": "Natively",
     "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
+      "dist",
+      "dist-electron",
       "package.json",
-      "node_modules/**/*",
-      "!**/native-module/target/**",
-      "!**/native-module/src/**",
-      "!**/native-module/.cargo/**"
+      "node_modules",
+      "!**/native-module/target",
+      "!**/native-module/src",
+      "!**/native-module/.cargo"
     ],
     "directories": {
       "output": "release",
@@ -180,7 +180,9 @@
     "katex": "^0.16.27",
     "keytar": "^7.9.0",
     "lucide-react": "^0.460.0",
-    "openai": "^6.19.0",
+    "mammoth": "^1.11.0",
+    "openai": "^6.22.0",
+    "pdf-parse": "^2.4.5",
     "react": "^18.3.1",
     "react-code-blocks": "^0.1.6",
     "react-dom": "^18.3.1",

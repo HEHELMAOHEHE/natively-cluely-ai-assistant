@@ -974,8 +974,9 @@ export function initializeIpcHandlers(appState: AppState): void {
         });
       } else if (provider === 'openai') {
         response = await axios.post('https://api.openai.com/v1/chat/completions', {
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: "Hello" }]
+          model: "gpt-5.2-chat-latest",
+          messages: [{ role: "user", content: "Hello" }],
+          max_completion_tokens: 10
         }, {
           headers: { Authorization: `Bearer ${apiKey}` }
         });
@@ -1612,6 +1613,185 @@ export function initializeIpcHandlers(appState: AppState): void {
     if (!ragManager) return { success: false };
     await ragManager.retryPendingEmbeddings();
     return { success: true };
+  });
+
+  // ==========================================
+  // Profile Engine IPC Handlers
+  // ==========================================
+
+  safeHandle("profile:upload-resume", async (_, filePath: string) => {
+    try {
+      console.log(`[IPC] profile:upload-resume called with: ${filePath}`);
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { success: false, error: 'Knowledge engine not initialized. Please ensure API keys are configured.' };
+      }
+      const { DocType } = require('./knowledge/types');
+      const result = await orchestrator.ingestDocument(filePath, DocType.RESUME);
+      return result;
+    } catch (error: any) {
+      console.error('[IPC] profile:upload-resume error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  safeHandle("profile:get-status", async () => {
+    try {
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { hasProfile: false, profileMode: false };
+      }
+      // Map new KnowledgeStatus back to legacy UI shape temporarily
+      const status = orchestrator.getStatus();
+      return {
+        hasProfile: status.hasResume,
+        profileMode: status.activeMode,
+        name: status.resumeSummary?.name,
+        role: status.resumeSummary?.role,
+        totalExperienceYears: status.resumeSummary?.totalExperienceYears
+      };
+    } catch (error: any) {
+      return { hasProfile: false, profileMode: false };
+    }
+  });
+
+  safeHandle("profile:set-mode", async (_, enabled: boolean) => {
+    try {
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { success: false, error: 'Knowledge engine not initialized' };
+      }
+      orchestrator.setKnowledgeMode(enabled);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  safeHandle("profile:delete", async () => {
+    try {
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { success: false, error: 'Knowledge engine not initialized' };
+      }
+      const { DocType } = require('./knowledge/types');
+      orchestrator.deleteDocumentsByType(DocType.RESUME);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  safeHandle("profile:get-profile", async () => {
+    try {
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) return null;
+      return orchestrator.getProfileData();
+    } catch (error: any) {
+      return null;
+    }
+  });
+
+  safeHandle("profile:select-file", async () => {
+    try {
+      const result: any = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: [
+          { name: 'Resume Files', extensions: ['pdf', 'docx', 'txt'] }
+        ]
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { cancelled: true };
+      }
+
+      return { success: true, filePath: result.filePaths[0] };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ==========================================
+  // JD & Research IPC Handlers
+  // ==========================================
+
+  safeHandle("profile:upload-jd", async (_, filePath: string) => {
+    try {
+      console.log(`[IPC] profile:upload-jd called with: ${filePath}`);
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { success: false, error: 'Knowledge engine not initialized. Please ensure API keys are configured.' };
+      }
+      const { DocType } = require('./knowledge/types');
+      const result = await orchestrator.ingestDocument(filePath, DocType.JD);
+      return result;
+    } catch (error: any) {
+      console.error('[IPC] profile:upload-jd error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  safeHandle("profile:delete-jd", async () => {
+    try {
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { success: false, error: 'Knowledge engine not initialized' };
+      }
+      const { DocType } = require('./knowledge/types');
+      orchestrator.deleteDocumentsByType(DocType.JD);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  safeHandle("profile:research-company", async (_, companyName: string) => {
+    try {
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { success: false, error: 'Knowledge engine not initialized' };
+      }
+      const engine = orchestrator.getCompanyResearchEngine();
+      const dossier = await engine.researchCompany(companyName);
+      return { success: true, dossier };
+    } catch (error: any) {
+      console.error('[IPC] profile:research-company error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  safeHandle("profile:generate-negotiation", async () => {
+    try {
+      const orchestrator = appState.getKnowledgeOrchestrator();
+      if (!orchestrator) {
+        return { success: false, error: 'Knowledge engine not initialized' };
+      }
+      const profileData = orchestrator.getProfileData();
+      if (!profileData) {
+        return { success: false, error: 'No resume uploaded' };
+      }
+
+      // Get the active documents and dossier
+      const status = orchestrator.getStatus();
+      if (!status.hasResume) {
+        return { success: false, error: 'No resume loaded' };
+      }
+
+      // Use the research engine to get cached dossier if a JD is active
+      let dossier = null;
+      if (profileData.activeJD?.company) {
+        const engine = orchestrator.getCompanyResearchEngine();
+        dossier = engine.getCachedDossier(profileData.activeJD.company);
+      }
+
+      const { generateNegotiationScript } = require('./knowledge/NegotiationEngine');
+      // We need access to internal docs - use the orchestrator's methods
+      // For now, return the dossier data so the frontend can display it
+      return { success: true, dossier, profileData };
+    } catch (error: any) {
+      console.error('[IPC] profile:generate-negotiation error:', error);
+      return { success: false, error: error.message };
+    }
   });
 }
 

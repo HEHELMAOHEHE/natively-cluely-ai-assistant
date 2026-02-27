@@ -13,6 +13,7 @@ import {
   CUSTOM_RECAP_PROMPT, CUSTOM_FOLLOWUP_PROMPT, CUSTOM_FOLLOW_UP_QUESTIONS_PROMPT, CUSTOM_ASSIST_PROMPT
 } from "./llm/prompts"
 import { deepVariableReplacer, getByPath } from './utils/curlUtils';
+import { KnowledgeOrchestrator } from './knowledge/KnowledgeOrchestrator';
 import curl2Json from "@bany/curl-to-json";
 import { CustomProvider, CurlProvider } from './services/CredentialsManager';
 import { exec } from 'child_process';
@@ -53,6 +54,7 @@ export class LLMHelper {
   private customProvider: CustomProvider | null = null;
   private activeCurlProvider: CurlProvider | null = null;
   private groqFastTextMode: boolean = false;
+  private knowledgeOrchestrator: KnowledgeOrchestrator | null = null;
 
   // Rate limiters per provider to prevent 429 errors on free tiers
   private rateLimiters: ReturnType<typeof createProviderRateLimiters>;
@@ -666,9 +668,51 @@ ANSWER DIRECTLY:`;
     }
   }
 
+  /**
+   * Set the KnowledgeOrchestrator for knowledge mode integration.
+   */
+  public setKnowledgeOrchestrator(orchestrator: KnowledgeOrchestrator): void {
+    this.knowledgeOrchestrator = orchestrator;
+    console.log('[LLMHelper] KnowledgeOrchestrator attached');
+  }
+
+  public getKnowledgeOrchestrator(): KnowledgeOrchestrator | null {
+    return this.knowledgeOrchestrator;
+  }
+
   public async chatWithGemini(message: string, imagePath?: string, context?: string, skipSystemPrompt: boolean = false, alternateGroqMessage?: string): Promise<string> {
     try {
       log.info(`[LLMHelper] chatWithGemini called with message:`, message.substring(0, 50))
+
+      // ============================================================
+      // KNOWLEDGE MODE INTERCEPT
+      // If knowledge mode is active, check for intro questions and
+      // inject system prompt + relevant context
+      // ============================================================
+      if (this.knowledgeOrchestrator?.isKnowledgeMode()) {
+        try {
+          const knowledgeResult = await this.knowledgeOrchestrator.processQuestion(message);
+          if (knowledgeResult) {
+            // Intro question shortcut — return generated response directly
+            if (knowledgeResult.isIntroQuestion && knowledgeResult.introResponse) {
+              console.log('[LLMHelper] Knowledge mode: returning generated intro response');
+              return knowledgeResult.introResponse;
+            }
+            // Inject knowledge system prompt and context
+            if (!skipSystemPrompt && knowledgeResult.systemPromptInjection) {
+              skipSystemPrompt = false; // ensure we use the knowledge prompt
+              // Prepend knowledge context to existing context
+              if (knowledgeResult.contextBlock) {
+                context = context
+                  ? `${knowledgeResult.contextBlock}\n\n${context}`
+                  : knowledgeResult.contextBlock;
+              }
+            }
+          }
+        } catch (knowledgeError: any) {
+          console.warn('[LLMHelper] Knowledge mode processing failed, falling back to normal:', knowledgeError.message);
+        }
+      }
 
       const isMultimodal = !!imagePath;
 
@@ -871,7 +915,7 @@ ANSWER DIRECTLY:`;
       model: GROQ_MODEL,
       messages: [{ role: "user", content: fullMessage }],
       temperature: 0.4,
-      max_tokens: 8192,
+      max_tokens: 32768,
       stream: false
     });
 
@@ -908,8 +952,7 @@ ANSWER DIRECTLY:`;
     const response = await this.openaiClient.chat.completions.create({
       model: OPENAI_MODEL,
       messages,
-      temperature: 0.4,
-      max_tokens: 8192,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
     });
 
     return response.choices[0]?.message?.content || "";
@@ -988,7 +1031,7 @@ ANSWER DIRECTLY:`;
 
     const response = await this.claudeClient.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 8192,
+      max_tokens: MAX_OUTPUT_TOKENS,
       ...(systemPrompt ? { system: systemPrompt } : {}),
       messages: [{ role: "user", content }],
     });
@@ -1212,7 +1255,7 @@ ANSWER DIRECTLY:`;
       // MULTIMODAL PROVIDER ORDER: Gemini Flash → OpenAI → Claude → Gemini Pro
       // Groq does NOT support vision
       if (this.client) {
-        providers.push({ name: `Gemini Flash (${GEMINI_FLASH_MODEL})`, execute: () => this.streamWithGeminiModel(combinedMessages.gemini, GEMINI_FLASH_MODEL) });
+        providers.push({ name: `Gemini Flash (${GEMINI_FLASH_MODEL})`, execute: () => this.streamWithGeminiModel(combinedMessages.gemini, GEMINI_FLASH_MODEL, imagePath) });
       }
       if (this.openaiClient) {
         providers.push({ name: `OpenAI (${OPENAI_MODEL})`, execute: () => this.streamWithOpenaiMultimodal(userContent, imagePath!, openaiSystemPrompt) });
@@ -1221,7 +1264,7 @@ ANSWER DIRECTLY:`;
         providers.push({ name: `Claude (${CLAUDE_MODEL})`, execute: () => this.streamWithClaudeMultimodal(userContent, imagePath!, claudeSystemPrompt) });
       }
       if (this.client) {
-        providers.push({ name: `Gemini Pro (${GEMINI_PRO_MODEL})`, execute: () => this.streamWithGeminiModel(combinedMessages.gemini, GEMINI_PRO_MODEL) });
+        providers.push({ name: `Gemini Pro (${GEMINI_PRO_MODEL})`, execute: () => this.streamWithGeminiModel(combinedMessages.gemini, GEMINI_PRO_MODEL, imagePath) });
       }
     } else {
       // TEXT-ONLY PROVIDER ORDER: Groq → OpenAI → Claude → Gemini Flash → Gemini Pro
@@ -1286,6 +1329,35 @@ ANSWER DIRECTLY:`;
     context?: string,
     systemPromptOverride?: string // Optional override (defaults to HARD_SYSTEM_PROMPT)
   ): AsyncGenerator<string, void, unknown> {
+
+    // ============================================================
+    // KNOWLEDGE MODE INTERCEPT (Streaming)
+    // ============================================================
+    if (this.knowledgeOrchestrator?.isKnowledgeMode()) {
+      try {
+        const knowledgeResult = await this.knowledgeOrchestrator.processQuestion(message);
+        if (knowledgeResult) {
+          // Intro question shortcut — yield generated response directly
+          if (knowledgeResult.isIntroQuestion && knowledgeResult.introResponse) {
+            console.log('[LLMHelper] Knowledge mode (stream): returning generated intro response');
+            yield knowledgeResult.introResponse;
+            return;
+          }
+          // Inject knowledge system prompt
+          if (knowledgeResult.systemPromptInjection) {
+            systemPromptOverride = knowledgeResult.systemPromptInjection;
+          }
+          // Inject knowledge context
+          if (knowledgeResult.contextBlock) {
+            context = context
+              ? `${knowledgeResult.contextBlock}\n\n${context}`
+              : knowledgeResult.contextBlock;
+          }
+        }
+      } catch (knowledgeError: any) {
+        console.warn('[LLMHelper] Knowledge mode (stream) processing failed, falling back:', knowledgeError.message);
+      }
+    }
 
     // Preparation
     const isMultimodal = !!imagePath;
@@ -1364,18 +1436,18 @@ ANSWER DIRECTLY:`;
       // Direct model use if specified
       if (this.currentModelId === GEMINI_PRO_MODEL) {
         const fullMsg = `${finalSystemPrompt}\n\n${userContent}`;
-        yield* this.streamWithGeminiModel(fullMsg, GEMINI_PRO_MODEL);
+        yield* this.streamWithGeminiModel(fullMsg, GEMINI_PRO_MODEL, imagePath);
         return;
       }
       if (this.currentModelId === GEMINI_FLASH_MODEL) {
         const fullMsg = `${finalSystemPrompt}\n\n${userContent}`;
-        yield* this.streamWithGeminiModel(fullMsg, GEMINI_FLASH_MODEL);
+        yield* this.streamWithGeminiModel(fullMsg, GEMINI_FLASH_MODEL, imagePath);
         return;
       }
 
       // Race strategy (default)
       const raceMsg = `${finalSystemPrompt}\n\n${userContent}`;
-      yield* this.streamWithGeminiParallelRace(raceMsg);
+      yield* this.streamWithGeminiParallelRace(raceMsg, imagePath);
     } else {
       throw new Error("No LLM provider available");
     }
@@ -1392,7 +1464,7 @@ ANSWER DIRECTLY:`;
       messages: [{ role: "user", content: fullMessage }],
       stream: true,
       temperature: 0.4,
-      max_tokens: 8192,
+      max_tokens: 32768,
     });
 
     for await (const chunk of stream) {
@@ -1419,8 +1491,7 @@ ANSWER DIRECTLY:`;
       model: OPENAI_MODEL,
       messages,
       stream: true,
-      temperature: 0.4,
-      max_tokens: 8192,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
     });
 
     for await (const chunk of stream) {
@@ -1439,7 +1510,7 @@ ANSWER DIRECTLY:`;
 
     const stream = await this.claudeClient.messages.stream({
       model: CLAUDE_MODEL,
-      max_tokens: 8192,
+      max_tokens: MAX_OUTPUT_TOKENS,
       ...(systemPrompt ? { system: systemPrompt } : {}),
       messages: [{ role: "user", content: userMessage }],
     });
@@ -1476,8 +1547,7 @@ ANSWER DIRECTLY:`;
       model: OPENAI_MODEL,
       messages,
       stream: true,
-      temperature: 0.4,
-      max_tokens: 8192,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
     });
 
     for await (const chunk of stream) {
@@ -1499,7 +1569,7 @@ ANSWER DIRECTLY:`;
 
     const stream = await this.claudeClient.messages.stream({
       model: CLAUDE_MODEL,
-      max_tokens: 8192,
+      max_tokens: MAX_OUTPUT_TOKENS,
       ...(systemPrompt ? { system: systemPrompt } : {}),
       messages: [{
         role: "user",
@@ -1527,12 +1597,23 @@ ANSWER DIRECTLY:`;
   /**
    * Stream response from a specific Gemini model
    */
-  private async * streamWithGeminiModel(fullMessage: string, model: string): AsyncGenerator<string, void, unknown> {
+  private async * streamWithGeminiModel(fullMessage: string, model: string, imagePath?: string): AsyncGenerator<string, void, unknown> {
     if (!this.client) throw new Error("Gemini client not initialized");
+
+    const contents: any[] = [{ text: fullMessage }];
+    if (imagePath) {
+      const imageData = await fs.promises.readFile(imagePath);
+      contents.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: imageData.toString("base64")
+        }
+      });
+    }
 
     const streamResult = await this.client.models.generateContentStream({
       model: model,
-      contents: [{ text: fullMessage }],
+      contents: contents,
       config: {
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         temperature: 0.4,
@@ -1560,12 +1641,12 @@ ANSWER DIRECTLY:`;
   /**
    * Race Flash and Pro streams, return whichever succeeds first
    */
-  private async * streamWithGeminiParallelRace(fullMessage: string): AsyncGenerator<string, void, unknown> {
+  private async * streamWithGeminiParallelRace(fullMessage: string, imagePath?: string): AsyncGenerator<string, void, unknown> {
     if (!this.client) throw new Error("Gemini client not initialized");
 
     // Start both streams
-    const flashPromise = this.collectStreamResponse(fullMessage, GEMINI_FLASH_MODEL);
-    const proPromise = this.collectStreamResponse(fullMessage, GEMINI_PRO_MODEL);
+    const flashPromise = this.collectStreamResponse(fullMessage, GEMINI_FLASH_MODEL, imagePath);
+    const proPromise = this.collectStreamResponse(fullMessage, GEMINI_PRO_MODEL, imagePath);
 
     // Race - whoever finishes first wins
     const result = await Promise.any([flashPromise, proPromise]);
@@ -1581,12 +1662,23 @@ ANSWER DIRECTLY:`;
   /**
    * Collect full response from a Gemini model (non-streaming for race)
    */
-  private async collectStreamResponse(fullMessage: string, model: string): Promise<string> {
+  private async collectStreamResponse(fullMessage: string, model: string, imagePath?: string): Promise<string> {
     if (!this.client) throw new Error("Gemini client not initialized");
+
+    const contents: any[] = [{ text: fullMessage }];
+    if (imagePath) {
+      const imageData = await fs.promises.readFile(imagePath);
+      contents.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: imageData.toString("base64")
+        }
+      });
+    }
 
     const response = await this.client.models.generateContent({
       model: model,
-      contents: [{ text: fullMessage }],
+      contents: contents,
       config: {
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         temperature: 0.4,
@@ -2124,7 +2216,7 @@ ANSWER DIRECTLY:`;
               { role: "user", content: `Context:\n${context}` }
             ],
             temperature: 0.3,
-            max_tokens: 8192,
+            max_tokens: 32768,
             stream: false
           }),
           45000,

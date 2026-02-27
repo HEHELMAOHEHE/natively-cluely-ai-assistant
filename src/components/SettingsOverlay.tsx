@@ -6,7 +6,7 @@ import {
     ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
     Camera, RotateCcw, Eye, Layout, MessageSquare, Crop,
     ChevronDown, Check, BadgeCheck, Power, Palette, Calendar, Ghost, Sun, Moon, RefreshCw, Info, Globe, FlaskConical, Terminal, Settings, Activity, ExternalLink, Trash2,
-    Sparkles, Pencil
+    Sparkles, Pencil, Briefcase, Building2, Search
 } from 'lucide-react';
 import { analytics } from '../lib/analytics/analytics.service';
 import { AboutSection } from './AboutSection';
@@ -14,6 +14,7 @@ import { AIProvidersSettings } from './settings/AIProvidersSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { KeyRecorder } from './ui/KeyRecorder';
+import { ProfileVisualizer } from './profile/ProfileVisualizer';
 
 interface CustomSelectProps {
     label: string;
@@ -232,6 +233,22 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
     const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
     const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'uptodate' | 'error'>('idle');
     const themeDropdownRef = React.useRef<HTMLDivElement>(null);
+
+    // Profile Engine State
+    const [profileStatus, setProfileStatus] = useState<{
+        hasProfile: boolean;
+        profileMode: boolean;
+        name?: string;
+        role?: string;
+        totalExperienceYears?: number;
+    }>({ hasProfile: false, profileMode: false });
+    const [profileUploading, setProfileUploading] = useState(false);
+    const [profileError, setProfileError] = useState('');
+    const [profileData, setProfileData] = useState<any>(null);
+    const [jdUploading, setJdUploading] = useState(false);
+    const [jdError, setJdError] = useState('');
+    const [companyResearching, setCompanyResearching] = useState(false);
+    const [companyDossier, setCompanyDossier] = useState<any>(null);
 
     // Close dropdown when clicking outside
     // Sync with global state changes
@@ -895,6 +912,17 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                     >
                                         <Keyboard size={16} /> Keybinds
                                     </button>
+                                    <button
+                                        onClick={() => {
+                                            setActiveTab('profile');
+                                            // Load profile status when switching to this tab
+                                            window.electronAPI?.profileGetStatus?.().then(setProfileStatus).catch(() => { });
+                                            window.electronAPI?.profileGetProfile?.().then(setProfileData).catch(() => { });
+                                        }}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'profile' ? 'bg-bg-item-active text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-bg-item-active/50'}`}
+                                    >
+                                        <User size={16} /> Profile
+                                    </button>
 
                                     <button
                                         onClick={() => setActiveTab('about')}
@@ -1190,6 +1218,397 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                         </div>
                                     </div>
 
+                                </div>
+                            )}
+                            {activeTab === 'profile' && (
+                                <div className="space-y-6 animated fadeIn">
+                                    {/* Introduction */}
+                                    {/* Introduction */}
+                                    <div className="mb-5">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-sm font-bold text-text-primary">Professional Identity</h3>
+                                            <span className="bg-yellow-500/10 text-yellow-500 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">BETA</span>
+                                        </div>
+                                        <p className="text-xs text-text-secondary mb-2">
+                                            This engine constructs an intelligent representation of your career history.
+                                        </p>
+                                    </div>
+
+                                    {/* Intelligence Graph Hero Card */}
+                                    <div className="bg-bg-item-surface rounded-xl border border-border-subtle flex flex-col justify-between overflow-hidden">
+                                        <div className="flex flex-col justify-between min-h-[160px]">
+
+                                            {/* Header */}
+                                            <div className="p-5 pb-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-full bg-bg-input border border-border-subtle flex items-center justify-center text-text-primary shadow-sm hover:scale-105 transition-transform duration-300">
+                                                            <span className="font-bold text-sm tracking-tight">
+                                                                {profileData?.identity?.name ? profileData.identity.name.charAt(0).toUpperCase() : 'U'}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-bold text-text-primary tracking-tight">
+                                                                {profileData?.identity?.name || 'Identity Node Inactive'}
+                                                            </h4>
+                                                            <p className="text-xs text-text-secondary mt-0.5 tracking-wide">
+                                                                {profileData?.identity?.email || 'Upload a resume to begin mapping.'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        {profileStatus.hasProfile && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!confirm('Are you sure you want to delete your mapped persona? This will destroy all structured timeline data.')) return;
+                                                                    try {
+                                                                        await window.electronAPI?.profileDelete?.();
+                                                                        setProfileStatus({ hasProfile: false, profileMode: false });
+                                                                        setProfileData(null);
+                                                                    } catch (e) { console.error('Failed to delete profile:', e); }
+                                                                }}
+                                                                className="text-[12px] font-medium text-text-tertiary hover:text-red-500 transition-colors px-3 py-1.5 rounded-full hover:bg-red-500/10"
+                                                            >
+                                                                Disconnect
+                                                            </button>
+                                                        )}
+
+                                                        {/* High-fidelity Toggle */}
+                                                        <div className="flex items-center gap-2 bg-bg-input px-3 py-1.5 rounded-full border border-border-subtle">
+                                                            <span className="text-xs font-medium text-text-secondary">Persona Engine</span>
+                                                            <div
+                                                                onClick={async () => {
+                                                                    if (!profileStatus.hasProfile) return;
+                                                                    const newState = !profileStatus.profileMode;
+                                                                    try {
+                                                                        await window.electronAPI?.profileSetMode?.(newState);
+                                                                        setProfileStatus(prev => ({ ...prev, profileMode: newState }));
+                                                                    } catch (e) {
+                                                                        console.error('Failed to toggle profile mode:', e);
+                                                                    }
+                                                                }}
+                                                                className={`w-9 h-5 rounded-full relative transition-colors ${!profileStatus.hasProfile ? 'opacity-40 cursor-not-allowed bg-bg-toggle-switch' : profileStatus.profileMode ? 'bg-accent-primary cursor-pointer' : 'bg-bg-toggle-switch border border-border-muted cursor-pointer'}`}
+                                                            >
+                                                                <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${profileStatus.profileMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Data Metrics & Extracted Skills */}
+                                            <div className="p-5 pt-0 mt-auto">
+                                                <div className="flex items-center justify-between bg-bg-item-surface dark:bg-[#1A1A1A] border border-border-subtle py-4 px-6 rounded-2xl shadow-sm">
+                                                    <div className="flex flex-col items-center justify-center flex-1">
+                                                        <span className="text-[20px] font-bold text-text-primary tracking-tight leading-none mb-1">{profileData?.experienceCount || 0}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                                                            <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-widest">Experience</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="h-8 w-px bg-border-subtle/60" />
+
+                                                    <div className="flex flex-col items-center justify-center flex-1">
+                                                        <span className="text-[20px] font-bold text-text-primary tracking-tight leading-none mb-1">{profileData?.projectCount || 0}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+                                                            <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-widest">Projects</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="h-8 w-px bg-border-subtle/60" />
+
+                                                    <div className="flex flex-col items-center justify-center flex-1">
+                                                        <span className="text-[20px] font-bold text-text-primary tracking-tight leading-none mb-1">{profileData?.nodeCount || 0}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]" />
+                                                            <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-widest">Nodes</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {profileData?.skills && profileData.skills.length > 0 && (
+                                                    <div className="mt-5">
+                                                        <div className="text-[10px] font-bold text-text-primary uppercase tracking-wide mb-2">
+                                                            Top Skills
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {profileData.skills.slice(0, 15).map((skill: string, i: number) => (
+                                                                <span key={i} className="text-[10px] font-medium text-text-secondary px-2 py-1 rounded-md border border-border-subtle bg-bg-input">
+                                                                    {skill}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Upload Area */}
+                                    <div className="mt-5">
+                                        <div className={`bg-bg-item-surface rounded-xl border transition-all ${profileUploading ? 'border-accent-primary/50 ring-1 ring-accent-primary/20' : 'border-border-subtle'}`}>
+                                            <div className="p-5 flex items-center justify-between">
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className="w-10 h-10 rounded-lg bg-bg-input border border-border-subtle flex items-center justify-center text-text-tertiary shrink-0">
+                                                        {profileUploading ? <RefreshCw size={20} className="animate-spin text-accent-primary" /> : <Upload size={20} />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-sm font-bold text-text-primary mb-0.5 truncate pr-4">
+                                                            {profileStatus.hasProfile ? 'Overwrite Source Document' : 'Initialize Knowledge Base'}
+                                                        </h4>
+                                                        {profileUploading ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-[4px] w-[100px] bg-bg-input rounded-full overflow-hidden">
+                                                                    <div className="h-full bg-accent-primary rounded-full animate-pulse" style={{ width: '50%' }} />
+                                                                </div>
+                                                                <span className="text-[10px] text-text-secondary tracking-wide">Processing structural semantics...</span>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-text-secondary truncate pr-4">
+                                                                Provide a resume file to seed the intelligence engine.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={async () => {
+                                                        setProfileError('');
+                                                        try {
+                                                            const fileResult = await window.electronAPI?.profileSelectFile?.();
+                                                            if (fileResult?.cancelled || !fileResult?.filePath) return;
+
+                                                            setProfileUploading(true);
+                                                            const result = await window.electronAPI?.profileUploadResume?.(fileResult.filePath);
+                                                            if (result?.success) {
+                                                                const status = await window.electronAPI?.profileGetStatus?.();
+                                                                if (status) setProfileStatus(status);
+                                                                const data = await window.electronAPI?.profileGetProfile?.();
+                                                                if (data) setProfileData(data);
+                                                            } else {
+                                                                setProfileError(result?.error || 'Upload failed');
+                                                            }
+                                                        } catch (e: any) {
+                                                            setProfileError(e.message || 'Upload failed');
+                                                        } finally {
+                                                            setProfileUploading(false);
+                                                        }
+                                                    }}
+                                                    disabled={profileUploading}
+                                                    className={`px-4 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap shrink-0 ${profileUploading ? 'bg-bg-input text-text-tertiary cursor-wait border border-border-subtle' : 'bg-text-primary text-bg-main hover:opacity-90 shadow-sm'}`}
+                                                >
+                                                    {profileUploading ? 'Ingesting...' : 'Select File'}
+                                                </button>
+                                            </div>
+
+                                            {profileError && (
+                                                <div className="px-5 pb-4">
+                                                    <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-[11px] text-red-500 font-medium">
+                                                        <X size={12} /> {profileError}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* JD Upload Card */}
+                                    <div className="mt-5">
+                                        <div className={`rounded-xl transition-all border ${jdUploading ? 'border-blue-500/50 ring-1 ring-blue-500/20 bg-bg-item-surface' : profileData?.hasActiveJD ? 'border-blue-500/30 bg-blue-500/5' : 'border-border-subtle bg-bg-item-surface'}`}>
+                                            <div className="p-5 flex items-center justify-between">
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className="w-10 h-10 rounded-lg bg-bg-input border border-border-subtle flex items-center justify-center text-text-tertiary shrink-0">
+                                                        {jdUploading ? <RefreshCw size={20} className="animate-spin text-blue-500" /> : <Briefcase size={20} />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-sm font-bold text-text-primary mb-0.5 truncate pr-4">
+                                                            {profileData?.hasActiveJD ? `${profileData.activeJD?.title} @ ${profileData.activeJD?.company}` : 'Upload Job Description'}
+                                                        </h4>
+                                                        {jdUploading ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-[4px] w-[100px] bg-bg-input rounded-full overflow-hidden">
+                                                                    <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '50%' }} />
+                                                                </div>
+                                                                <span className="text-[10px] text-text-secondary tracking-wide">Parsing JD structure...</span>
+                                                            </div>
+                                                        ) : profileData?.hasActiveJD ? (
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-[9px] font-bold text-blue-500 px-1.5 py-0.5 bg-blue-500/10 rounded uppercase tracking-wide border border-blue-500/20">
+                                                                    {profileData.activeJD?.level || 'mid'}-level
+                                                                </span>
+                                                                <div className="flex gap-1.5">
+                                                                    {profileData.activeJD?.technologies?.slice(0, 3).map((t: string, i: number) => (
+                                                                        <span key={i} className="text-[10px] text-text-secondary">{t}</span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-text-secondary">
+                                                                Upload a JD to enable persona tuning and company research.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {profileData?.hasActiveJD && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                await window.electronAPI?.profileDeleteJD?.();
+                                                                const data = await window.electronAPI?.profileGetProfile?.();
+                                                                if (data) setProfileData(data);
+                                                                setCompanyDossier(null);
+                                                            }}
+                                                            className="px-2.5 py-2 rounded-full text-xs text-text-tertiary hover:text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={async () => {
+                                                            setJdError('');
+                                                            try {
+                                                                const fileResult = await window.electronAPI?.profileSelectFile?.();
+                                                                if (fileResult?.cancelled || !fileResult?.filePath) return;
+
+                                                                setJdUploading(true);
+                                                                const result = await window.electronAPI?.profileUploadJD?.(fileResult.filePath);
+                                                                if (result?.success) {
+                                                                    const data = await window.electronAPI?.profileGetProfile?.();
+                                                                    if (data) setProfileData(data);
+                                                                } else {
+                                                                    setJdError(result?.error || 'JD upload failed');
+                                                                }
+                                                            } catch (e: any) {
+                                                                setJdError(e.message || 'JD upload failed');
+                                                            } finally {
+                                                                setJdUploading(false);
+                                                            }
+                                                        }}
+                                                        disabled={jdUploading}
+                                                        className={`px-4 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap shrink-0 ${jdUploading ? 'bg-bg-input text-text-tertiary cursor-wait border border-border-subtle' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-sm'}`}
+                                                    >
+                                                        {jdUploading ? 'Parsing...' : profileData?.hasActiveJD ? 'Replace JD' : 'Upload JD'}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {jdError && (
+                                                <div className="px-5 pb-4">
+                                                    <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-[11px] text-red-500 font-medium">
+                                                        <X size={12} /> {jdError}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Company Research Section */}
+                                    {profileData?.hasActiveJD && profileData?.activeJD?.company && (
+                                        <div className="mt-5">
+                                            <div className="bg-bg-item-surface rounded-xl border border-border-subtle p-5">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-lg bg-bg-input border border-border-subtle flex items-center justify-center text-purple-500">
+                                                            <Building2 size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-bold text-text-primary">
+                                                                Company Intel: <span className="text-purple-400">{profileData.activeJD.company}</span>
+                                                            </h4>
+                                                            <p className="text-[11px] text-text-secondary mt-0.5">
+                                                                {companyDossier ? 'Research complete' : 'Run research to get hiring strategy, salaries & competitors'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={async () => {
+                                                            setCompanyResearching(true);
+                                                            try {
+                                                                const result = await window.electronAPI?.profileResearchCompany?.(profileData.activeJD.company);
+                                                                if (result?.success && result.dossier) {
+                                                                    setCompanyDossier(result.dossier);
+                                                                }
+                                                            } catch (e) {
+                                                                console.error('Research failed:', e);
+                                                            } finally {
+                                                                setCompanyResearching(false);
+                                                            }
+                                                        }}
+                                                        disabled={companyResearching}
+                                                        className={`px-4 py-2 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${companyResearching ? 'bg-bg-input text-text-tertiary cursor-wait border border-border-subtle' : 'bg-purple-600/10 text-purple-500 hover:bg-purple-600/20 border border-purple-500/20'}`}
+                                                    >
+                                                        {companyResearching ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                                                        {companyResearching ? 'Researching...' : companyDossier ? 'Refresh' : 'Research Now'}
+                                                    </button>
+                                                </div>
+
+                                                {/* Dossier Results */}
+                                                {companyDossier && (
+                                                    <div className="space-y-4 border-t border-border-subtle pt-4 mt-2">
+                                                        {companyDossier.hiring_strategy && (
+                                                            <div>
+                                                                <div className="text-[10px] font-bold text-text-primary uppercase tracking-wide mb-1 flex items-center gap-1.5"><Sparkles size={12} className="text-purple-400" /> Hiring Strategy</div>
+                                                                <p className="text-xs text-text-secondary leading-relaxed bg-bg-input/50 p-3 rounded-lg border border-border-subtle/50">{companyDossier.hiring_strategy}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {companyDossier.interview_focus && (
+                                                            <div>
+                                                                <div className="text-[10px] font-bold text-text-primary uppercase tracking-wide mb-1 flex items-center gap-1.5"><MessageSquare size={12} className="text-purple-400" /> Interview Focus</div>
+                                                                <p className="text-xs text-text-secondary leading-relaxed bg-bg-input/50 p-3 rounded-lg border border-border-subtle/50">{companyDossier.interview_focus}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {companyDossier.salary_estimates?.length > 0 && (
+                                                            <div>
+                                                                <div className="text-[10px] font-bold text-text-primary uppercase tracking-wide mb-1">Salary Estimates</div>
+                                                                <div className="space-y-2 bg-bg-input/50 p-3 rounded-lg border border-border-subtle/50">
+                                                                    {companyDossier.salary_estimates.map((s: any, i: number) => (
+                                                                        <div key={i} className="flex items-center justify-between pb-2 mb-2 border-b border-border-subtle last:border-0 last:pb-0 last:mb-0">
+                                                                            <span className="text-xs text-text-primary font-medium">{s.title} <span className="text-text-tertiary">({s.location})</span></span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-xs font-bold text-green-400">
+                                                                                    {s.currency} {s.min?.toLocaleString()} - {s.max?.toLocaleString()}
+                                                                                </span>
+                                                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${s.confidence === 'high' ? 'bg-green-500/10 text-green-500 border-green-500/20' : s.confidence === 'medium' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
+                                                                                    {s.confidence.toUpperCase()}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {companyDossier.competitors?.length > 0 && (
+                                                            <div>
+                                                                <div className="text-[10px] font-bold text-text-primary uppercase tracking-wide mb-2">Competitors</div>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {companyDossier.competitors.map((c: string, i: number) => (
+                                                                        <span key={i} className="text-[11px] text-text-secondary px-2.5 py-1 rounded bg-bg-input border border-border-subtle flex items-center gap-1.5">
+                                                                            <Building2 size={10} className="text-text-tertiary" /> {c}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {companyDossier.sources?.length > 0 && (
+                                                            <div className="text-[10px] text-text-tertiary mt-2">
+                                                                Sources: {companyDossier.sources.filter(Boolean).length} references
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <ProfileVisualizer profileData={profileData} />
                                 </div>
                             )}
                             {activeTab === 'ai-providers' && (

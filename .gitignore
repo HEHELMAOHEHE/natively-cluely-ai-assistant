@@ -171,3 +171,4 @@ native-module/*.node
 
 
 .kilocodemodes
+.kilocode/

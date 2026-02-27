@@ -17,6 +17,7 @@ import { SettingsWindowHelper } from "./SettingsWindowHelper"
 import { ModelSelectorWindowHelper } from "./ModelSelectorWindowHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
 import { KeybindManager } from "./services/KeybindManager"
+import { CalendarManager } from "./services/CalendarManager"
 import { ProcessingHelper } from "./ProcessingHelper"
 
 import { IntelligenceManager } from "./IntelligenceManager"
@@ -1560,7 +1561,6 @@ async function initializeApp() {
 
   // 11. Calendar & Meeting Recovery
   try {
-    const { CalendarManager } = require('./services/CalendarManager');
     const calMgr = CalendarManager.getInstance();
     calMgr.init();
 

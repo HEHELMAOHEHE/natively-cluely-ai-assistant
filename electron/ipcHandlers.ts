@@ -8,6 +8,14 @@ import { DatabaseManager } from "./db/DatabaseManager"; // Import Database Manag
 import * as path from "path";
 import * as fs from "fs";
 import { AudioDevices } from "./audio/AudioDevices";
+import { CalendarManager } from "./services/CalendarManager";
+import { ReleaseNotesManager } from "./update/ReleaseNotesManager";
+import { DonationManager } from "./DonationManager";
+import { CredentialsManager } from "./services/CredentialsManager";
+import { extractEmailsFromTranscript, buildMailtoLink, buildFollowUpEmailPromptInput } from "./utils/emailUtils";
+import { DocType } from "./knowledge/types";
+import { generateNegotiationScript } from "./knowledge/NegotiationEngine";
+import { FOLLOWUP_EMAIL_PROMPT, GROQ_FOLLOWUP_EMAIL_PROMPT } from "./llm/prompts";
 
 import { ENGLISH_VARIANTS } from "./config/languages"
 
@@ -21,7 +29,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle("test-release-fetch", async () => {
     try {
       log.info("[IPC] Manual Test Fetch triggered (forcing refresh)...");
-      const { ReleaseNotesManager } = require('./update/ReleaseNotesManager');
       const notes = await ReleaseNotesManager.getInstance().fetchReleaseNotes('latest', true);
 
       if (notes) {
@@ -156,7 +163,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   // Donation IPC Handlers
   safeHandle("get-donation-status", async () => {
-    const { DonationManager } = require('./DonationManager');
     const manager = DonationManager.getInstance();
     return {
       shouldShow: manager.shouldShowToaster(),
@@ -166,13 +172,11 @@ export function initializeIpcHandlers(appState: AppState): void {
   });
 
   safeHandle("mark-donation-toast-shown", async () => {
-    const { DonationManager } = require('./DonationManager');
     DonationManager.getInstance().markAsShown();
     return { success: true };
   });
 
   safeHandle("set-donation-complete", async () => {
-    const { DonationManager } = require('./DonationManager');
     DonationManager.getInstance().setHasDonated(true);
     return { success: true };
   });
@@ -458,7 +462,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       // Persist API key if provided
       if (apiKey) {
-        const { CredentialsManager } = require('./services/CredentialsManager');
         CredentialsManager.getInstance().setGeminiApiKey(apiKey);
       }
 
@@ -472,7 +475,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Dedicated API key setters (for Settings UI Save buttons)
   safeHandle("set-gemini-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setGeminiApiKey(apiKey);
 
       // Also update the LLMHelper immediately
@@ -491,7 +493,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-groq-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setGroqApiKey(apiKey);
 
       // Also update the LLMHelper immediately
@@ -510,7 +511,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-openai-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setOpenaiApiKey(apiKey);
 
       // Also update the LLMHelper immediately
@@ -529,7 +529,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-claude-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setClaudeApiKey(apiKey);
 
       // Also update the LLMHelper immediately
@@ -549,7 +548,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Custom Provider Handlers
   safeHandle("get-custom-providers", async () => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       const cm = CredentialsManager.getInstance();
       // Merge new Curl Providers with legacy Custom Providers
       // New ones take precedence if IDs conflict (though unlikely as UUIDs)
@@ -564,7 +562,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("save-custom-provider", async (_, provider: any) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       // Save as CurlProvider (supports responsePath)
       CredentialsManager.getInstance().saveCurlProvider(provider);
       return { success: true };
@@ -576,7 +573,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("delete-custom-provider", async (_, id: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       // Try deleting from both storages to be safe
       CredentialsManager.getInstance().deleteCurlProvider(id);
       CredentialsManager.getInstance().deleteCustomProvider(id);
@@ -589,7 +585,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("switch-to-custom-provider", async (_, providerId: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       const provider = CredentialsManager.getInstance().getCustomProviders().find((p: any) => p.id === providerId);
 
       if (!provider) {
@@ -612,7 +607,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   // cURL Provider Handlers
   safeHandle("get-curl-providers", async () => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       return CredentialsManager.getInstance().getCurlProviders();
     } catch (error: any) {
       log.error("Error getting curl providers:", error);
@@ -622,7 +616,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("save-curl-provider", async (_, provider: any) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().saveCurlProvider(provider);
       return { success: true };
     } catch (error: any) {
@@ -633,7 +626,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("delete-curl-provider", async (_, id: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().deleteCurlProvider(id);
       return { success: true };
     } catch (error: any) {
@@ -644,7 +636,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("switch-to-curl-provider", async (_, providerId: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       const provider = CredentialsManager.getInstance().getCurlProviders().find((p: any) => p.id === providerId);
 
       if (!provider) {
@@ -667,7 +658,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Get stored API keys (masked for UI display)
   safeHandle("get-stored-credentials", async () => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       const creds = CredentialsManager.getInstance().getAllCredentials();
 
       // Return masked versions for security (just indicate if set)
@@ -701,7 +691,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-stt-provider", async (_, provider: 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson') => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setSttProvider(provider);
 
       // Reconfigure the audio pipeline to use the new STT provider
@@ -716,7 +705,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("get-stt-provider", async () => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       return CredentialsManager.getInstance().getSttProvider();
     } catch (error: any) {
       return 'google';
@@ -725,7 +713,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-groq-stt-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setGroqSttApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
@@ -736,7 +723,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-openai-stt-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setOpenAiSttApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
@@ -747,7 +733,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-deepgram-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setDeepgramApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
@@ -758,7 +743,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-groq-stt-model", async (_, model: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setGroqSttModel(model);
 
       // Reconfigure the audio pipeline to use the new model
@@ -773,7 +757,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-elevenlabs-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setElevenLabsApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
@@ -784,7 +767,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-azure-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setAzureApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
@@ -795,7 +777,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-azure-region", async (_, region: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setAzureRegion(region);
 
       // Reconfigure the pipeline since region changes the endpoint URL
@@ -810,7 +791,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-ibmwatson-api-key", async (_, apiKey: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setIbmWatsonApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
@@ -945,7 +925,6 @@ export function initializeIpcHandlers(appState: AppState): void {
     log.info(`[IPC] Received test-llm-connection request for provider: ${provider}`);
     try {
       if (!apiKey || !apiKey.trim()) {
-        const { CredentialsManager } = require('./services/CredentialsManager');
         const creds = CredentialsManager.getInstance();
         if (provider === 'gemini') apiKey = creds.getGeminiApiKey();
         else if (provider === 'groq') apiKey = creds.getGroqApiKey();
@@ -1037,7 +1016,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle("set-model", async (_, modelId: string) => {
     try {
       const llmHelper = appState.processingHelper.getLLMHelper();
-      const { CredentialsManager } = require('./services/CredentialsManager');
       const cm = CredentialsManager.getInstance();
 
       // Get all providers (Curl + Custom)
@@ -1067,7 +1045,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Persist default model (from Settings) + update runtime + broadcast to all windows
   safeHandle("set-default-model", async (_, modelId: string) => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       const cm = CredentialsManager.getInstance();
       cm.setDefaultModel(modelId);
 
@@ -1098,7 +1075,6 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Read the persisted default model
   safeHandle("get-default-model", async () => {
     try {
-      const { CredentialsManager } = require('./services/CredentialsManager');
       const cm = CredentialsManager.getInstance();
       return { model: cm.getDefaultModel() };
     } catch (error: any) {
@@ -1352,7 +1328,6 @@ export function initializeIpcHandlers(appState: AppState): void {
       appState.updateGoogleCredentials(filePath);
 
       // Persist the path for future sessions
-      const { CredentialsManager } = require('./services/CredentialsManager');
       CredentialsManager.getInstance().setGoogleServiceAccountPath(filePath);
 
       return { success: true, path: filePath };
@@ -1385,7 +1360,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("calendar-connect", async () => {
     try {
-      const { CalendarManager } = require('./services/CalendarManager');
       await CalendarManager.getInstance().startAuthFlow();
       return { success: true };
     } catch (error: any) {
@@ -1395,23 +1369,19 @@ export function initializeIpcHandlers(appState: AppState): void {
   });
 
   safeHandle("calendar-disconnect", async () => {
-    const { CalendarManager } = require('./services/CalendarManager');
     await CalendarManager.getInstance().disconnect();
     return { success: true };
   });
 
   safeHandle("get-calendar-status", async () => {
-    const { CalendarManager } = require('./services/CalendarManager');
     return CalendarManager.getInstance().getConnectionStatus();
   });
 
   safeHandle("get-upcoming-events", async () => {
-    const { CalendarManager } = require('./services/CalendarManager');
     return CalendarManager.getInstance().getUpcomingEvents();
   });
 
   safeHandle("calendar-refresh", async () => {
-    const { CalendarManager } = require('./services/CalendarManager');
     await CalendarManager.getInstance().refreshState();
     return { success: true };
   });
@@ -1422,9 +1392,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("generate-followup-email", async (_, input: any) => {
     try {
-      const { FOLLOWUP_EMAIL_PROMPT, GROQ_FOLLOWUP_EMAIL_PROMPT } = require('./llm/prompts');
-      const { buildFollowUpEmailPromptInput } = require('./utils/emailUtils');
-
       const llmHelper = appState.processingHelper.getLLMHelper();
 
       // Build the context string from input
@@ -1446,7 +1413,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("extract-emails-from-transcript", async (_, transcript: Array<{ text: string }>) => {
     try {
-      const { extractEmailsFromTranscript } = require('./utils/emailUtils');
       return extractEmailsFromTranscript(transcript);
     } catch (error: any) {
       log.error("Error extracting emails:", error);
@@ -1456,7 +1422,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("get-calendar-attendees", async (_, eventId: string) => {
     try {
-      const { CalendarManager } = require('./services/CalendarManager');
       const cm = CalendarManager.getInstance();
 
       // Try to get attendees from the event
@@ -1479,7 +1444,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("open-mailto", async (_, { to, subject, body }: { to: string; subject: string; body: string }) => {
     try {
-      const { buildMailtoLink } = require('./utils/emailUtils');
       const mailtoUrl = buildMailtoLink(to, subject, body);
       await shell.openExternal(mailtoUrl);
       return { success: true };
@@ -1626,7 +1590,6 @@ export function initializeIpcHandlers(appState: AppState): void {
       if (!orchestrator) {
         return { success: false, error: 'Knowledge engine not initialized. Please ensure API keys are configured.' };
       }
-      const { DocType } = require('./knowledge/types');
       const result = await orchestrator.ingestDocument(filePath, DocType.RESUME);
       return result;
     } catch (error: any) {
@@ -1674,7 +1637,6 @@ export function initializeIpcHandlers(appState: AppState): void {
       if (!orchestrator) {
         return { success: false, error: 'Knowledge engine not initialized' };
       }
-      const { DocType } = require('./knowledge/types');
       orchestrator.deleteDocumentsByType(DocType.RESUME);
       return { success: true };
     } catch (error: any) {
@@ -1722,7 +1684,6 @@ export function initializeIpcHandlers(appState: AppState): void {
       if (!orchestrator) {
         return { success: false, error: 'Knowledge engine not initialized. Please ensure API keys are configured.' };
       }
-      const { DocType } = require('./knowledge/types');
       const result = await orchestrator.ingestDocument(filePath, DocType.JD);
       return result;
     } catch (error: any) {
@@ -1737,7 +1698,6 @@ export function initializeIpcHandlers(appState: AppState): void {
       if (!orchestrator) {
         return { success: false, error: 'Knowledge engine not initialized' };
       }
-      const { DocType } = require('./knowledge/types');
       orchestrator.deleteDocumentsByType(DocType.JD);
       return { success: true };
     } catch (error: any) {
@@ -1784,7 +1744,6 @@ export function initializeIpcHandlers(appState: AppState): void {
         dossier = engine.getCachedDossier(profileData.activeJD.company);
       }
 
-      const { generateNegotiationScript } = require('./knowledge/NegotiationEngine');
       // We need access to internal docs - use the orchestrator's methods
       // For now, return the dossier data so the frontend can display it
       return { success: true, dossier, profileData };
@@ -1794,4 +1753,9 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   });
 }
+
+
+
+
+
 

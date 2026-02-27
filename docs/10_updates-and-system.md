@@ -31,7 +31,7 @@ natively/
 ```bash
 git clone https://github.com/evinjohnn/natively-cluely-ai-assistant.git
 cd natively-cluely-ai-assistant
-npm install
+bun install
 ```
 
 #### Environment Variables
@@ -58,12 +58,12 @@ NODE_ENV=development
 
 #### Running in Development Mode
 ```bash
-npm start
+bun start
 ```
 
 #### Building Distribution
 ```bash
-npm run dist
+bun run dist
 ```
 
 ### Extending Functionality
@@ -236,12 +236,12 @@ Logs are saved in:
 #### Generating Distributions
 ```bash
 # Build for all platforms
-npm run dist
+bun run dist
 
 # Or for specific platform
-npm run dist:mac
-npm run dist:win
-npm run dist:linux
+bun run dist:mac
+bun run dist:win
+bun run dist:linux
 ```
 
 #### App Signing (macOS)

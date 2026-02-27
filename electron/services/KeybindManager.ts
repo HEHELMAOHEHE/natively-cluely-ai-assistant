@@ -47,6 +47,7 @@ export class KeybindManager {
     private filePath: string;
     private windowHelper?: WindowHelper;
     private onUpdateCallbacks: (() => void)[] = [];
+    private onShortcutTriggeredCallbacks: ((actionId: string) => void)[] = [];
     private registeredGlobalShortcuts: Set<string> = new Set();
 
     private constructor() {
@@ -63,6 +64,10 @@ export class KeybindManager {
 
     public onUpdate(callback: () => void) {
         this.onUpdateCallbacks.push(callback);
+    }
+
+    public onShortcutTriggered(callback: (actionId: string) => void) {
+        this.onShortcutTriggeredCallbacks.push(callback);
     }
 
     public setWindowHelper(helper: WindowHelper) {
@@ -211,6 +216,8 @@ private normalizeAccelerator(accelerator: string): string {
             if (!globalShortcut.isRegistered(acc)) {
                 globalShortcut.register(acc, () => {
                     log.info(`[KeybindManager] Shortcut triggered: ${acc} -> ${kb.label}`);
+                    // Notify callbacks
+                    this.onShortcutTriggeredCallbacks.forEach(cb => cb(kb.id));
                     handler();
                 });
                 this.registeredGlobalShortcuts.add(acc);

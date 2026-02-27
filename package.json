@@ -9,7 +9,7 @@
     "backend:dev": "vite --port 5180",
     "build": "bun run clean && tsc && vite build",
     "preview": "vite preview",
-    "postinstall": "cross-env SHARP_IGNORE_GLOBAL_LIBVIPS=1 bunx sharp --force && bunx electron-rebuild -f -w better-sqlite3 -w keytar || echo 'electron-rebuild completed with warnings' && (bun run build:native || (echo 'Installing Rust...' && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && bun run build:native) || echo 'native-module build failed')",
+    "postinstall": "cross-env SHARP_IGNORE_GLOBAL_LIBVIPS=1 bun rebuild sharp || echo 'Sharp rebuild skipped' && bunx electron-rebuild -f -w better-sqlite3 -w keytar || echo 'electron-rebuild completed with warnings' && (bun run build:native || echo 'native-module build skipped - requires Rust toolchain')",
     "electron:dev": "tsc -p electron/tsconfig.json && tsc-alias -p electron/tsconfig.json && cross-env NODE_ENV=development electron .",
     "electron:dev:only": "bun run electron:dev",
     "electron:dev:custom-url": "tsc -p electron/tsconfig.json && cross-env NODE_ENV=development RENDERER_URL=http://localhost:5173 electron .",

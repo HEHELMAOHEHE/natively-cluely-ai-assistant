@@ -272,7 +272,7 @@ If migration fails:
 
 After migration, verify:
 
-- [ ] `bun install` completes without errors
+- [x] `bun install` completes without errors (172 packages installed)
 - [ ] `bun run dev` starts Vite dev server
 - [ ] `bun run electron:dev` launches Electron app
 - [ ] `bun run app:dev` works for full development
@@ -296,6 +296,17 @@ After migration, verify:
 - **Native modules** are compiled for Electron's Node.js version, not system Node.js
 - **bunx** replaces `npx` for package execution
 - **Bun's lock file** is `bun.lockb` (binary format)
+
+## Known Issues
+
+### Windows Environment
+
+On Windows, some native module build issues may occur:
+
+1. **Sharp rebuild**: Use `bun rebuild sharp` as fallback
+2. **Native module (Rust)**: Requires Visual Studio Build Tools with MSVC linker
+   - Install: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+   - Select: "Desktop development with C++"
 
 ## References
 

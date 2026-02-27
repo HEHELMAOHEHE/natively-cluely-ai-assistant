@@ -1,4 +1,3 @@
-import { log } from '@utils/logger';
 
 import Database from 'better-sqlite3';
 import path from 'path';
@@ -54,33 +53,33 @@ export class DatabaseManager {
 
     private init() {
         try {
-            log.info(`[DatabaseManager] Initializing database at ${this.dbPath}`);
+            console.log(`[DatabaseManager] Initializing database at ${this.dbPath}`);
             // Ensure directory exists (though userData usually does)
             const dir = path.dirname(this.dbPath);
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
-                log.info(`[DatabaseManager] Created directory: ${dir}`);
+                console.log(`[DatabaseManager] Created directory: ${dir}`);
             } else {
-                log.info(`[DatabaseManager] Directory exists: ${dir}`);
+                console.log(`[DatabaseManager] Directory exists: ${dir}`);
                 try {
                     const files = fs.readdirSync(dir);
-                    log.info(`[DatabaseManager] Directory contents:`, files);
+                    console.log(`[DatabaseManager] Directory contents:`, files);
                     const dbExists = fs.existsSync(this.dbPath);
                     if (dbExists) {
                         const stats = fs.statSync(this.dbPath);
-                        log.info(`[DatabaseManager] Found existing DB. Size: ${stats.size} bytes`);
+                        console.log(`[DatabaseManager] Found existing DB. Size: ${stats.size} bytes`);
                     } else {
-                        log.info(`[DatabaseManager] No existing DB found at ${this.dbPath}. Creating new one.`);
+                        console.log(`[DatabaseManager] No existing DB found at ${this.dbPath}. Creating new one.`);
                     }
                 } catch (e) {
-                    log.error('[DatabaseManager] Error checking directory/file:', e);
+                    console.error('[DatabaseManager] Error checking directory/file:', e);
                 }
             }
 
             this.db = new Database(this.dbPath);
             this.runMigrations();
         } catch (error) {
-            log.error('[DatabaseManager] Failed to initialize database:', error);
+            console.error('[DatabaseManager] Failed to initialize database:', error);
             throw error;
         }
     }
@@ -193,16 +192,53 @@ export class DatabaseManager {
             this.db.exec("ALTER TABLE meetings ADD COLUMN is_processed INTEGER DEFAULT 1"); // Default to 1 (true) for existing records
         } catch (e) { /* Column likely exists */ }
 
-        log.info('[DatabaseManager] Migrations completed.');
+        // Profile Engine: User profile table
+        const createUserProfileTable = `
+            CREATE TABLE IF NOT EXISTS user_profile (
+                id INTEGER PRIMARY KEY,
+                structured_json TEXT NOT NULL,
+                compact_persona TEXT NOT NULL,
+                intro_short TEXT,
+                intro_interview TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `;
+        this.db.exec(createUserProfileTable);
+
+        // Profile Engine: Resume nodes table (atomic searchable units)
+        const createResumeNodesTable = `
+            CREATE TABLE IF NOT EXISTS resume_nodes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT,
+                title TEXT,
+                organization TEXT,
+                start_date TEXT,
+                end_date TEXT,
+                duration_months INTEGER,
+                text_content TEXT,
+                tags TEXT,
+                embedding BLOB
+            );
+        `;
+        this.db.exec(createResumeNodesTable);
+
+        console.log('[DatabaseManager] Migrations completed.');
     }
 
     // ============================================
     // Public API
     // ============================================
 
+    /**
+     * Expose the raw database instance for external managers (e.g. ProfileDatabaseManager).
+     */
+    public getDb(): Database.Database | null {
+        return this.db;
+    }
+
     public saveMeeting(meeting: Meeting, startTimeMs: number, durationMs: number) {
         if (!this.db) {
-            log.error('[DatabaseManager] DB not initialized');
+            console.error('[DatabaseManager] DB not initialized');
             return;
         }
 
@@ -285,9 +321,9 @@ export class DatabaseManager {
 
         try {
             runTransaction();
-            log.info(`[DatabaseManager] Successfully saved meeting ${meeting.id}`);
+            console.log(`[DatabaseManager] Successfully saved meeting ${meeting.id}`);
         } catch (err) {
-            log.error(`[DatabaseManager] Failed to save meeting ${meeting.id}`, err);
+            console.error(`[DatabaseManager] Failed to save meeting ${meeting.id}`, err);
             throw err;
         }
     }
@@ -299,7 +335,7 @@ export class DatabaseManager {
             const info = stmt.run(title, id);
             return info.changes > 0;
         } catch (error) {
-            log.error(`[DatabaseManager] Failed to update title for meeting ${id}:`, error);
+            console.error(`[DatabaseManager] Failed to update title for meeting ${id}:`, error);
             return false;
         }
     }
@@ -341,7 +377,7 @@ export class DatabaseManager {
             return info.changes > 0;
 
         } catch (error) {
-            log.error(`[DatabaseManager] Failed to update summary for meeting ${id}:`, error);
+            console.error(`[DatabaseManager] Failed to update summary for meeting ${id}:`, error);
             return false;
         }
     }
@@ -454,10 +490,10 @@ export class DatabaseManager {
         try {
             const stmt = this.db.prepare('DELETE FROM meetings WHERE id = ?');
             const info = stmt.run(id);
-            log.info(`[DatabaseManager] Deleted meeting ${id}. Changes: ${info.changes}`);
+            console.log(`[DatabaseManager] Deleted meeting ${id}. Changes: ${info.changes}`);
             return info.changes > 0;
         } catch (error) {
-            log.error(`[DatabaseManager] Failed to delete meeting ${id}:`, error);
+            console.error(`[DatabaseManager] Failed to delete meeting ${id}:`, error);
             return false;
         }
     }
@@ -510,10 +546,10 @@ export class DatabaseManager {
             this.db.exec('DELETE FROM transcripts');
             this.db.exec('DELETE FROM meetings');
 
-            log.info('[DatabaseManager] All data cleared from database.');
+            console.log('[DatabaseManager] All data cleared from database.');
             return true;
         } catch (error) {
-            log.error('[DatabaseManager] Failed to clear all data:', error);
+            console.error('[DatabaseManager] Failed to clear all data:', error);
             return false;
         }
     }
@@ -524,7 +560,7 @@ export class DatabaseManager {
         // Check if demo meeting already exists
         const existing = this.db.prepare('SELECT id FROM meetings WHERE id = ?').get('demo-meeting');
         if (existing) {
-            log.info('[DatabaseManager] Demo meeting already exists, skipping seed.');
+            console.log('[DatabaseManager] Demo meeting already exists, skipping seed.');
             return;
         }
 
@@ -699,7 +735,6 @@ natively.contact@gmail.com`;
         };
 
         this.saveMeeting(demoMeeting, today.getTime(), durationMs);
-        log.info('[DatabaseManager] Seeded demo meeting.');
+        console.log('[DatabaseManager] Seeded demo meeting.');
     }
 }
-

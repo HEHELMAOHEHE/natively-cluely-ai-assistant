@@ -5,11 +5,12 @@ Natively is built on modern and reliable technologies that ensure high performan
 ### Core Technologies
 
 #### Frontend
-- **React** — library for building user interfaces
+- **React 19** — library for building user interfaces
 - **Vite** — modern bundler with instant hot reload during development
 - **TypeScript** — strict typing for improved code reliability
-- **TailwindCSS** — utility-first styling framework
-- **Electron** — platform for building desktop applications using Chromium and Node.js
+- **TailwindCSS 3** — utility-first styling framework
+- **Electron 40** — platform for building desktop applications using Chromium and Node.js
+- **TanStack Query v5** — async state management for React
 
 #### Backend and Main Process
 - **Node.js (v20+)** — JavaScript runtime
@@ -68,12 +69,14 @@ npm install
 ```
 
 Key dependencies include:
-- `electron` — application foundation
-- `react`, `vite` — interface
-- `sqlite3` — database operations
+- `electron` 40.x — application foundation
+- `react` 19, `react-dom` 19 — interface
+- `@tanstack/react-query` v5 — async state management
+- `vite` — bundler
+- `better-sqlite3` — database operations
 - `sharp` — image processing
 - `axios/fetch` — API HTTP requests
-- `socket.io/electron-ipc` — internal communication
+- `electron-store` — persistent configuration storage
 
 ### External Service Integrations
 

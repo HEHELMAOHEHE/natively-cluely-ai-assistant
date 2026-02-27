@@ -118,7 +118,7 @@ private normalizeAccelerator(accelerator: string): string {
         switch (lower) {
             case 'cmdorctrl':
             case 'commandorcontrol':
-                return 'CommandOrControl'; // Electron сам конвертирует под платформу
+                return 'CommandOrControl'; // Electron converts for the platform
             case 'ctrl':
             case 'control':
                 return 'Control';
@@ -138,8 +138,8 @@ private normalizeAccelerator(accelerator: string): string {
         }
 
         if (/^f\d{1,2}$/i.test(lower)) return lower.toUpperCase(); // F1-F12
-        if (part.length === 1) return part.toUpperCase();           // буквы/цифры
-        return part; // оставляем как есть
+        if (part.length === 1) return part.toUpperCase();           // letters/numbers
+        return part; // leave as is
     });
 
     return normalizedParts.join('+');
@@ -190,7 +190,7 @@ private normalizeAccelerator(accelerator: string): string {
 
     // --- GLOBAL SHORTCUTS ---
     public registerGlobalShortcuts() {
-    // Убираем старые
+    // Remove old ones
     this.registeredGlobalShortcuts.forEach(acc => {
         if (globalShortcut.isRegistered(acc)) globalShortcut.unregister(acc);
     });

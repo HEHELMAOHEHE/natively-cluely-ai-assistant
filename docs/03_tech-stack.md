@@ -63,9 +63,9 @@ Communication between these processes is handled via IPC (Inter-Process Communic
 - Native Rust implementation for efficient system audio capture without latency
 
 ### Dependency Management
-The project uses npm/yarn for package management:
+The project uses bun for package management:
 ```bash
-npm install
+bun install
 ```
 
 Key dependencies include:

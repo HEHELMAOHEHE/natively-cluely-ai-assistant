@@ -37,7 +37,7 @@ git clone https://github.com/evinjohnn/natively-cluely-ai-assistant.git
 cd natively-cluely-ai-assistant
 
 # Install dependencies
-npm install
+bun install
 
 # Create .env configuration file
 touch .env
@@ -72,10 +72,10 @@ DEFAULT_MODEL=gemini-3-flash-preview
 #### Launching the Application
 ```bash
 # Development
-npm start
+bun start
 
 # Build distribution
-npm run dist
+bun run dist
 ```
 
 ### API Key Configuration

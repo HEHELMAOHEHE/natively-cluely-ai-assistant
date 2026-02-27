@@ -48,7 +48,7 @@
 
 ---
 
-## Security Vulnerabilities (npm audit)
+## Security Vulnerabilities (bun audit)
 
 **12 vulnerabilities remaining (4 moderate, 8 high):**
 - minimatch (high) - ReDoS in glob patterns
@@ -73,4 +73,4 @@ All updates committed to: `feature/dependency-migration`
 ### Electron 40
 - Native modules require rebuild
 - postinstall script handles this automatically
-- Use `npm run postinstall` or `npx electron-rebuild`
+- Use `bun run postinstall` or `bunx electron-rebuild`

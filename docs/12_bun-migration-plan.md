@@ -308,6 +308,24 @@ On Windows, some native module build issues may occur:
    - Install: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
    - Select: "Desktop development with C++"
 
+#### Automated Visual Studio Build Tools Installation
+
+Add to `package.json` scripts for automated VS installation:
+
+```json
+"install:vs": "powershell -Command \"Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vs_buildtools.exe' -OutFile vs_buildtools.exe; Start-Process -FilePath '.\\vs_buildtools.exe' -ArgumentList '--quiet', '--wait', '--norestart', '--nocache', '--add', 'Microsoft.VisualStudio.Workload.VCTools', '--add', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '--add', 'Microsoft.VisualStudio.Component.Windows10SDK.19041' -Wait; Remove-Item vs_buildtools.exe\"",
+"install:rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+"setup:native": "bun run install:vs && bun run install:rust && bun run build:native"
+```
+
+**Manual Installation (Recommended):**
+
+1. Download [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+2. Run installer with admin rights
+3. Select "Desktop development with C++"
+4. Ensure "Windows 10 SDK" is selected
+5. Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`
+
 ## References
 
 - [Bun Documentation](https://bun.sh/docs)

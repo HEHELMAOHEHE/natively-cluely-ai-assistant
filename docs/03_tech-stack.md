@@ -1,91 +1,91 @@
-## 3. Технологический стек
+## 3. Technology Stack
 
-Natively построен на современных и надежных технологиях, обеспечивающих высокую производительность, кроссплатформенность и безопасность. Проект использует комбинацию веб-технологий для интерфейса и нативных компонентов для системной интеграции.
+Natively is built on modern and reliable technologies that ensure high performance, cross-platform compatibility, and security. The project uses a combination of web technologies for the interface and native components for system integration.
 
-### Основные технологии
+### Core Technologies
 
-#### Фронтенд
-- **React** — библиотека для создания пользовательских интерфейсов
-- **Vite** — современный сборщик с мгновенной загрузкой при разработке
-- **TypeScript** — строгая типизация для повышения надежности кода
-- **TailwindCSS** — utility-first фреймворк для стилизации
-- **Electron** — платформа для создания десктопных приложений на базе Chromium и Node.js
+#### Frontend
+- **React** — library for building user interfaces
+- **Vite** — modern bundler with instant hot reload during development
+- **TypeScript** — strict typing for improved code reliability
+- **TailwindCSS** — utility-first styling framework
+- **Electron** — platform for building desktop applications using Chromium and Node.js
 
-#### Бэкенд и основной процесс
-- **Node.js (v20+)** — среда выполнения JavaScript
-- **Rust** — используется для нативного захвата аудио напрямую из системы
-- **Electron** — обеспечивает доступ к системным API операционной системы
-- **SQLite** — локальная реляционная база данных для хранения транскрипций, метаданных и векторных эмбеддингов
-- **IPC (Inter-Process Communication)** — механизм взаимодействия между основным процессом Electron и процессами рендеринга
+#### Backend and Main Process
+- **Node.js (v20+)** — JavaScript runtime
+- **Rust** — used for native audio capture directly from the system
+- **Electron** — provides access to operating system APIs
+- **SQLite** — local relational database for storing transcripts, metadata, and vector embeddings
+- **IPC (Inter-Process Communication)** — mechanism for communication between Electron main process and renderer processes
 
-#### Система искусственного интеллекта
-- **Google Cloud Speech-to-Text** — преобразование речи в текст через Google STT
-- **Groq** — ультрабыстрое ИИ-ускорение с моделями Llama 3
-- **OpenAI Whisper** — расшифровка речи от OpenAI
-- **Deepgram** — облачная система распознавания речи
-- **ElevenLabs** — продвинутое распознавание речи
-- **Azure Speech Services** — сервисы распознавания речи от Microsoft
-- **IBM Watson** — система распознавания речи от IBM
+#### Artificial Intelligence System
+- **Google Cloud Speech-to-Text** — speech-to-text via Google STT
+- **Groq** — ultra-fast AI acceleration with Llama 3 models
+- **OpenAI Whisper** — speech transcription from OpenAI
+- **Deepgram** — cloud speech recognition
+- **ElevenLabs** — advanced speech recognition
+- **Azure Speech Services** — Microsoft speech recognition services
+- **IBM Watson** — IBM speech recognition system
 
-#### Модели ИИ
-- **Gemini 3 Pro/Flash** — рекомендуемый вариант с огромным контекстным окном (2M токенов) и низкой стоимостью
-- **OpenAI GPT-5.2** — высокие способности к рассуждению
-- **Anthropic Claude 4.5** — отличное понимание кода и сложных задач
-- **Groq/Llama 3** — невероятная скорость ответов (почти мгновенные)
-- **Ollama** — поддержка полностью локальных моделей (Llama 3, Mistral, Gemma, CodeLlama)
+#### AI Models
+- **Gemini 3 Pro/Flash** — recommended option with huge context window (2M tokens) and low cost
+- **OpenAI GPT-5.2** — high reasoning capabilities
+- **Anthropic Claude 4.5** — excellent code understanding and complex tasks
+- **Groq/Llama 3** — incredible response speed (almost instant)
+- **Ollama** — support for fully local models (Llama 3, Mistral, Gemma, CodeLlama)
 
-#### Дополнительные технологии
-- **Sharp** — оптимизированная библиотека для обработки изображений, обеспечивающая быстрый анализ скриншотов
-- **electron-updater** — автоматическое обновление приложения
-- **AutoUpdater** — менеджер обновлений для Electron-приложений
-- **ReleaseNotesManager** — управление информацией о релизах
+#### Additional Technologies
+- **Sharp** — optimized image processing library for fast screenshot analysis
+- **electron-updater** — automatic application updates
+- **AutoUpdater** — update manager for Electron applications
+- **ReleaseNotesManager** — release information management
 
-### Архитектурные решения
+### Architectural Decisions
 
-#### Клиент-серверная модель внутри Electron
-Приложение использует классическую архитектуру Electron:
-- **Основной процесс**: управляет жизненным циклом приложения, окнами, системными событиями, аудио-захватом и базой данных
-- **Процесс рендеринга**: отвечает за отображение интерфейса, взаимодействие с пользователем и визуализацию результатов ИИ
+#### Client-Server Model within Electron
+The application uses a classic Electron architecture:
+- **Main Process**: manages application lifecycle, windows, system events, audio capture, and database
+- **Renderer Process**: responsible for interface display, user interaction, and AI results visualization
 
-Между этими процессами осуществляется взаимодействие через IPC (Inter-Process Communication), что обеспечивает безопасность и изоляцию.
+Communication between these processes is handled via IPC (Inter-Process Communication), ensuring security and isolation.
 
-#### Локальное хранилище и RAG
-- **SQLite** используется как основное хранилище данных
-- Реализована система **Local RAG (Retrieval Augmented Generation)** с локальной векторной базой данных
-- Все векторные эмбеддинги создаются и хранятся исключительно на устройстве пользователя
-- Поддерживается семантический поиск по истории встреч ("Что Джон говорил об API на прошлой неделе?")
+#### Local Storage and RAG
+- **SQLite** is used as the primary data storage
+- **Local RAG (Retrieval Augmented Generation)** system with local vector database is implemented
+- All vector embeddings are created and stored exclusively on the user's device
+- Semantic search across meeting history is supported ("What did John say about API last week?")
 
-#### Аудио-система
-- **System Audio Capture** — захватывает аудио напрямую из операционной системы (Zoom, Teams, Meet)
-- **Microphone Capture** — отдельный канал для микрофона пользователя
-- Поддержка двойного аудио-канала: один для собеседников, другой для команд пользователя
-- Нативная реализация на Rust для эффективного захвата системного звука без задержек
+#### Audio System
+- **System Audio Capture** — captures audio directly from the operating system (Zoom, Teams, Meet)
+- **Microphone Capture** — separate channel for user's microphone
+- Dual audio channel support: one for interlocutors, another for user's commands
+- Native Rust implementation for efficient system audio capture without latency
 
-#### Управление зависимостями
-Проект использует npm/yarn для управления пакетами:
+### Dependency Management
+The project uses npm/yarn for package management:
 ```bash
 npm install
 ```
 
-Ключевые зависимости включают:
-- `electron` — основа приложения
-- `react`, `vite` — интерфейс
-- `sqlite3` — работа с базой данных
-- `sharp` — обработка изображений
-- `axios/fetch` — HTTP-запросы к API
-- `socket.io/electron-ipc` — внутренняя коммуникация
+Key dependencies include:
+- `electron` — application foundation
+- `react`, `vite` — interface
+- `sqlite3` — database operations
+- `sharp` — image processing
+- `axios/fetch` — API HTTP requests
+- `socket.io/electron-ipc` — internal communication
 
-### Интеграции с внешними сервисами
+### External Service Integrations
 
 #### BYOK (Bring Your Own Keys)
-Пользователь предоставляет свои собственные ключи для облачных сервисов:
-- `GEMINI_API_KEY` — для доступа к Gemini
-- `GROQ_API_KEY` — для использования Groq
-- `OPENAI_API_KEY` — для работы с OpenAI
-- `CLAUDE_API_KEY` — для доступа к Anthropic Claude
-- `GOOGLE_APPLICATION_CREDENTIALS` — путь к JSON-файлу сервисного аккаунта Google для STT
+User provides their own keys for cloud services:
+- `GEMINI_API_KEY` — for Gemini access
+- `GROQ_API_KEY` — for Groq usage
+- `OPENAI_API_KEY` — for OpenAI
+- `CLAUDE_API_KEY` — for Anthropic Claude
+- `GOOGLE_APPLICATION_CREDENTIALS` — path to Google service account JSON file for STT
 
-#### Конфигурация через .env
+#### .env Configuration
 ```env
 # Cloud AI
 GEMINI_API_KEY=your_key
@@ -109,19 +109,18 @@ OLLAMA_URL=http://localhost:11434
 DEFAULT_MODEL=gemini-3-flash-preview
 ```
 
-### Системные требования
+### System Requirements
 
-#### Минимальные требования:
-- **Операционная система**: macOS, Windows или Linux
-- **RAM**: 4GB (минимально), 8GB+ рекомендуется
-- **Дисковое пространство**: ~500MB для установки + место для хранения записей
-- **Node.js**: v20 или выше
-- **Git**: для клонирования репозитория
-- **Rust**: требуется для компиляции нативных аудио-компонентов
+#### Minimum Requirements:
+- **Operating System**: macOS, Windows, or Linux
+- **RAM**: 4GB (minimum), 8GB+ recommended
+- **Disk Space**: ~500MB for installation + storage space for recordings
+- **Node.js**: v20 or higher
+- **Git**: for cloning the repository
+- **Rust**: required for compiling native audio components
 
-#### Рекомендуемые конфигурации:
-- Для облачных моделей: 8GB RAM, стабильное интернет-соединение
-- Для локальных моделей (Ollama): 16GB+ RAM, мощный CPU/GPU
+#### Recommended Configurations:
+- For cloud models: 8GB RAM, stable internet connection
+- For local models (Ollama): 16GB+ RAM, powerful CPU/GPU
 
-Этот технологический стек позволяет Natively быть одновременно мощным, гибким и приватным решением, сочетающим лучшие практики веб-разработки с глубокой интеграцией в операционную систему.
-
+This technology stack allows Natively to be simultaneously powerful, flexible, and private, combining best practices of web development with deep operating system integration.

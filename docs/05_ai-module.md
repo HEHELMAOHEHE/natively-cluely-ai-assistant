@@ -1,23 +1,23 @@
-## 5. Модуль искусственного интеллекта и обработки речи
+## 5. Artificial Intelligence Module and Speech Processing
 
-Natively реализует многослойную систему ИИ, которая объединяет распознавание речи, семантический анализ, генерацию ответов и локальную систему знаний (RAG) для создания мощного ассистента в реальном времени.
+Natively implements a multi-layered AI system that combines speech recognition, semantic analysis, response generation, and a local knowledge system (RAG) to create a powerful real-time assistant.
 
-### Архитектура модуля ИИ
+### AI Module Architecture
 
-#### Центральный компонент: IntelligenceManager
-Класс `IntelligenceManager` является ядром интеллектуальной системы приложения. Он отвечает за:
-- Обработку транскрипций из аудио-каналов
-- Управление контекстом встречи
-- Генерацию рекомендаций и ответов
-- Интеграцию с RAG-системой для доступа к истории
-- Создание сводок и вопросов для уточнения
+#### Central Component: IntelligenceManager
+The `IntelligenceManager` class is the core of the application's intelligent system. It is responsible for:
+- Processing transcriptions from audio channels
+- Meeting context management
+- Generating recommendations and answers
+- Integrating with RAG system for history access
+- Creating summaries and clarifying questions
 
 ```typescript
 private intelligenceManager: IntelligenceManager = new IntelligenceManager(this.processingHelper.getLLMHelper())
 ```
 
-#### События и коммуникация
-`IntelligenceManager` использует систему событий для взаимодействия с интерфейсом:
+#### Events and Communication
+`IntelligenceManager` uses an event system to interact with the interface:
 
 ```typescript
 this.intelligenceManager.on('suggested_answer', (answer: string, question: string, confidence: number) => {
@@ -29,41 +29,41 @@ this.intelligenceManager.on('recap', (summary: string) => {
 })
 ```
 
-Основные события:
-- `assist_update`: обновления анализа ситуации
-- `suggested_answer`: предложенный ответ на вопрос
-- `refined_answer`: уточненный или перегенерированный ответ
-- `recap`: сводка встречи
-- `follow_up_questions_update`: вопросы для уточнения
-- `manual_answer_result`: результат ручного запроса пользователя
-- `mode_changed`: изменение режима работы ИИ
-- `error`: ошибки в работе ИИ
+Main events:
+- `assist_update`: situation analysis updates
+- `suggested_answer`: suggested answer to a question
+- `refined_answer`: refined or regenerated answer
+- `recap`: meeting summary
+- `follow_up_questions_update`: clarifying questions
+- `manual_answer_result`: result of user's manual request
+- `mode_changed`: AI mode change
+- `error`: AI operation errors
 
-### Поддерживаемые модели ИИ
+### Supported AI Models
 
-Natively поддерживает широкий спектр облачных и локальных моделей:
+Natively supports a wide range of cloud and local models:
 
-#### Облачные модели
-| Модель | Описание |
+#### Cloud Models
+| Model | Description |
 |-------|--------|
-| **Gemini 3 Pro/Flash** | Рекомендуемый вариант с огромным контекстным окном (2M токенов) и низкой стоимостью |
-| **OpenAI GPT-5.2** | Высокие способности к рассуждению и анализу |
-| **Anthropic Claude 4.5** | Отличное понимание кода и сложных задач |
-| **Groq/Llama 3** | Ультрабыстрая работа (ответы почти мгновенно) |
+| **Gemini 3 Pro/Flash** | Recommended option with huge context window (2M tokens) and low cost |
+| **OpenAI GPT-5.2** | High reasoning and analysis capabilities |
+| **Anthropic Claude 4.5** | Excellent code understanding and complex tasks |
+| **Groq/Llama 3** | Ultra-fast operation (responses almost instant) |
 
-#### Локальные модели через Ollama
-Поддержка полностью автономной работы без интернета:
+#### Local Models via Ollama
+Support for fully offline operation without internet:
 - Llama 3
 - Mistral
 - Gemma
 - CodeLlama
-- Любой другой OpenAI-совместимый эндпоинт
+- Any other OpenAI-compatible endpoint
 
-### Система провайдеров ИИ
+### AI Provider System
 
-Приложение позволяет использовать любой ИИ-провайдер через гибкую систему конфигурации:
+The application allows using any AI provider through a flexible configuration system:
 
-#### Конфигурация через .env
+#### .env Configuration
 ```env
 # Cloud AI
 GEMINI_API_KEY=your_key
@@ -80,118 +80,117 @@ OLLAMA_URL=http://localhost:11434
 DEFAULT_MODEL=gemini-3-flash-preview
 ```
 
-#### Динамическое переключение моделей
-Система поддерживает изменение моделей "на лету" во время встречи:
-- Переключение между разными облачными провайдерами
-- Переход с облачных моделей на локальные и обратно
-- Автоматическое определение доступных моделей через Ollama API
+#### Dynamic Model Switching
+The system supports changing models on the fly during meetings:
+- Switching between different cloud providers
+- Transitioning from cloud to local models and back
+- Automatic detection of available models via Ollama API
 
-### Обработка речи
+### Speech Processing
 
-#### Speech-to-Text провайдеры
-Natively поддерживает множество систем преобразования речи в текст:
+#### Speech-to-Text Providers
+Natively supports multiple speech-to-text systems:
 
-| Провайдер | Особенности |
+| Provider | Features |
 |----------|-----------|
-| **Google Cloud STT** | Через Service Account JSON, высокая точность |
-| **Deepgram** | Потоковая транскрипция, низкая задержка |
-| **Groq** | Ультрабыстрая обработка |
-| **OpenAI Whisper** | Точное распознавание через API OpenAI |
-| **ElevenLabs** | Продвинутое распознавание речи |
-| **Azure Speech Services** | Сервисы распознавания от Microsoft |
-| **IBM Watson** | Система распознавания речи от IBM |
+| **Google Cloud STT** | Via Service Account JSON, high accuracy |
+| **Deepgram** | Streaming transcription, low latency |
+| **Groq** | Ultra-fast processing |
+| **OpenAI Whisper** | Precise recognition via OpenAI API |
+| **ElevenLabs** | Advanced speech recognition |
+| **Azure Speech Services** | Microsoft recognition services |
+| **IBM Watson** | IBM speech recognition system |
 
-#### Двойная система STT
-Приложение использует два независимых канала STT:
+#### Dual STT System
+The application uses two independent STT channels:
 
 ```typescript
-private googleSTT: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // для собеседников
-private googleSTT_User: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // для пользователя
+private googleSTT: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // for interlocutors
+private googleSTT_User: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // for user
 ```
 
-Это позволяет:
-- Раздельно обрабатывать речь собеседников и пользователя
-- Использовать разные провайдеры для разных каналов
-- Задавать частные вопросы ИИ без участия в основной беседе
+This allows:
+- Separate processing of interlocutors' and user's speech
+- Using different providers for different channels
+- Asking private AI questions without participating in the main conversation
 
-### Контекстное управление
+### Context Management
 
 #### Rolling Context Window
-Система поддерживает "окно памяти" текущей встречи:
-- Хранение последних N сообщений как контекста для ИИ
-- Динамическое обновление контекста по мере развития диалога
-- Приоритизация последних реплик для более релевантных ответов
+The system supports a "memory window" for the current meeting:
+- Storing the last N messages as AI context
+- Dynamically updating context as the dialog develops
+- Prioritizing recent replies for more relevant answers
 
 #### Smart Scope Detection
-Инновационная система определения контекста запроса:
-- Автоматически определяет, относится ли вопрос к текущей встрече или истории
-- Переключается между режимами "текущий разговор" и "поиск по прошлым встречам"
-- Позволяет задавать вопросы типа "Что Джон говорил об API на прошлой неделе?"
+Innovative request context detection system:
+- Automatically determines whether a question relates to the current meeting or history
+- Switches between "current conversation" and "search past meetings" modes
+- Allows asking questions like "What did John say about API last week?"
 
-### Локальная система знаний (RAG)
+### Local Knowledge System (RAG)
 
-#### Полностью локальная векторная база данных
-Все данные хранятся и обрабатываются исключительно на устройстве пользователя:
-- Векторные эмбеддинги создаются локально
-- Поиск происходит в SQLite базе данных
-- Никакие сырые данные не покидают устройство
+#### Fully Local Vector Database
+All data is stored and processed exclusively on the user's device:
+- Vector embeddings are created locally
+- Search occurs in SQLite database
+- No raw data leaves the device
 
-#### Автоматическая индексация
-Система автоматически обрабатывает встречи в фоновом режиме:
-- Разделение транскрипций на смысловые блоки
-- Создание векторных представлений
-- Индексирование по дате, теме, участникам
+#### Automatic Indexing
+The system automatically processes meetings in the background:
+- Splitting transcripts into semantic chunks
+- Creating vector representations
+- Indexing by date, topic, participants
 
-#### Глобальный поиск
-Поддержка сложных запросов по всей истории:
-- "Найди все обсуждения API-интерфейсов"
-- "Покажи решения по проблеме с аутентификацией"
-- "Что мы решили на встрече 15 марта?"
+#### Global Search
+Support for complex queries across entire history:
+- "Find all API interface discussions"
+- "Show solutions for authentication problem"
+- "What did we decide at the meeting on March 15?"
 
-### Интерпретация визуального контента
+### Visual Content Interpretation
 
-#### Анализ скриншотов
-Приложение может анализировать визуальный контент:
-- Слайды презентаций
-- Блоки кода
-- Диаграммы и схемы
-- Технические документы
+#### Screenshot Analysis
+The application can analyze visual content:
+- Presentation slides
+- Code blocks
+- Diagrams and schematics
+- Technical documents
 
-#### Интеграция с ИИ
-Скриншоты передаются в ИИ-модели для анализа:
-- Объяснение сложных концепций
-- Поиск ошибок в коде
-- Предложения по улучшению дизайна
-- Ответы на вопросы по визуальному материалу
+#### AI Integration
+Screenshots are passed to AI models for analysis:
+- Explaining complex concepts
+- Finding errors in code
+- Design improvement suggestions
+- Answering questions about visual material
 
-### Режимы работы ИИ
+### AI Operation Modes
 
 #### Live Assistance
-Работа в реальном времени во время встречи:
-- Мгновенные подсказки по формулировке ответов
-- Анализ технических вопросов
-- Генерация контраргументов
-- Поиск информации в истории
+Real-time operation during meetings:
+- Instant suggestions for formulating answers
+- Analysis of technical questions
+- Generating counterarguments
+- Searching information in history
 
 #### Manual Mode
-Ручной режим для частных запросов:
-- Возможность задать вопрос ИИ через микрофон
-- Получение ответа без участия в основной беседе
-- Подготовка сложных ответов
+Manual mode for private requests:
+- Ability to ask AI questions via microphone
+- Receiving answers without participating in the main conversation
+- Preparing complex answers
 
 #### Recap & Summary
-Автоматическая генерация итогов:
-- Выделение ключевых моментов
-- Формулировка решений
-- Создание списка задач
-- Генерация вопросов для уточнения
+Automatic summary generation:
+- Highlighting key points
+- Formulating decisions
+- Creating task lists
+- Generating clarifying questions
 
-### Производительность и задержки
+### Performance and Latency
 
-Система оптимизирована для работы в реальном времени:
-- Задержка взаимодействий менее 500 мс
-- Параллельная обработка аудио, видео и текстовых запросов
-- Эффективное использование ресурсов даже на минимальных конфигурациях
+The system is optimized for real-time operation:
+- Interaction latency under 500 ms
+- Parallel processing of audio, video, and text requests
+- Efficient resource usage even on minimal configurations
 
-Эта комплексная система ИИ делает Natively мощным инструментом для профессиональных ситуаций, сочетающим скорость облачных моделей с приватностью локальной обработки.
-
+This comprehensive AI system makes Natively a powerful tool for professional situations, combining the speed of cloud models with the privacy of local processing.

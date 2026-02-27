@@ -1,16 +1,16 @@
-## 6. Система управления состоянием (AppState)
+## 6. State Management System (AppState)
 
-Класс `AppState` является центральным компонентом архитектуры Natively, реализующим паттерн Singleton и выступающим в роли единого источника правды для всего приложения.
+The `AppState` class is the central component of Natively's architecture, implementing the Singleton pattern and serving as the single source of truth for the entire application.
 
-### Архитектурная роль
+### Architectural Role
 
-`AppState` выполняет функции:
-- **Центрального менеджера состояния** - хранит глобальное состояние приложения
-- **Оркестратора модулей** - координирует работу всех сервисов и компонентов
-- **Шины событий** - обеспечивает коммуникацию между основным процессом Electron и процессами рендеринга
-- **Управления жизненным циклом** - контролирует запуск, работу и завершение приложения
+`AppState` performs the functions of:
+- **Central State Manager** - stores global application state
+- **Module Orchestrator** - coordinates the work of all services and components
+- **Event Bus** - ensures communication between Electron main process and renderer processes
+- **Lifecycle Management** - controls application startup, operation, and shutdown
 
-### Реализация Singleton
+### Singleton Implementation
 
 ```typescript
 private static instance: AppState | null = null
@@ -23,55 +23,55 @@ public static getInstance(): AppState {
 }
 ```
 
-Эта реализация гарантирует, что во всем приложении существует только один экземпляр `AppState`, обеспечивая согласованность состояния.
+This implementation ensures that there is only one instance of `AppState` throughout the application, providing state consistency.
 
-### Основные компоненты и зависимости
+### Main Components and Dependencies
 
-`AppState` интегрирует следующие ключевые модули:
+`AppState` integrates the following key modules:
 
-#### Окна и интерфейс
-- `WindowHelper` - управление главным окном, оверлеем и другими окнами
-- `SettingsWindowHelper` - управление окном настроек
-- `ModelSelectorWindowHelper` - выбор модели ИИ
-- `Tray` - иконка в системном трее
+#### Windows and Interface
+- `WindowHelper` - main window, overlay, and other windows management
+- `SettingsWindowHelper` - settings window management
+- `ModelSelectorWindowHelper` - AI model selection
+- `Tray` - system tray icon
 
-#### Аудио-система
-- `SystemAudioCapture` - захват системного звука
-- `MicrophoneCapture` - захват микрофона
-- `GoogleSTT` / `RestSTT` / `DeepgramStreamingSTT` - преобразование речи в текст
+#### Audio System
+- `SystemAudioCapture` - system audio capture
+- `MicrophoneCapture` - microphone capture
+- `GoogleSTT` / `RestSTT` / `DeepgramStreamingSTT` - speech-to-text
 
-#### Ядро ИИ
-- `IntelligenceManager` - обработка контекста встречи, генерация ответов
-- `ProcessingHelper` - помощь в обработке, включая LLM-функциональность
-- `RAGManager` - локальная система знаний с векторными эмбеддингами
+#### AI Core
+- `IntelligenceManager` - meeting context processing, answer generation
+- `ProcessingHelper` - processing assistance, including LLM functionality
+- `RAGManager` - local knowledge system with vector embeddings
 
-#### Данные и хранилище
-- `DatabaseManager` - работа с SQLite базой данных
-- `ScreenshotHelper` - захват и управление скриншотами
-- `ThemeManager` - управление темами интерфейса
+#### Data and Storage
+- `DatabaseManager` - SQLite database operations
+- `ScreenshotHelper` - screenshot capture and management
+- `ThemeManager` - interface theme management
 
-#### Системные сервисы
-- `KeybindManager` - управление горячими клавишами
-- `CredentialsManager` - безопасное хранение API-ключей
-- `ReleaseNotesManager` - управление информацией о релизах
-- `autoUpdater` - автоматическое обновление приложения
+#### System Services
+- `KeybindManager` - hotkey management
+- `CredentialsManager` - secure API key storage
+- `ReleaseNotesManager` - release information management
+- `autoUpdater` - automatic application updates
 
-### Управление состоянием встречи
+### Meeting State Management
 
-#### Флаг активности встречи
+#### Meeting Active Flag
 ```typescript
 private isMeetingActive: boolean = false;
 ```
-Ключевой флаг, определяющий состояние текущей встречи. Используется для:
-- Блокировки обработки транскрипций при неактивной встрече
-- Контроля запуска/остановки аудио-захвата
-- Управления жизненным циклом ИИ-обработки
+Key flag determining the current meeting state. Used for:
+- Blocking transcription processing when meeting is not active
+- Controlling audio capture start/stop
+- Managing AI processing lifecycle
 
-#### Начало встречи
+#### Meeting Start
 ```typescript
 public async startMeeting(metadata?: any): Promise<void> {
   this.isMeetingActive = true;
-  // ... инициализация компонентов
+  // ... component initialization
   this.setupSystemAudioPipeline();
   this.systemAudioCapture?.start();
   this.googleSTT?.start();
@@ -79,22 +79,22 @@ public async startMeeting(metadata?: any): Promise<void> {
 }
 ```
 
-#### Завершение встречи
+#### Meeting End
 ```typescript
 public async endMeeting(): Promise<void> {
-  this.isMeetingActive = false; // Блокировка новых данных
-  // Остановка аудио-захвата
+  this.isMeetingActive = false; // Block new data
+  // Stop audio capture
   this.systemAudioCapture?.stop();
   this.googleSTT?.stop();
-  // Сохранение и индексация результатов
+  // Save and index results
   await this.intelligenceManager.stopMeeting();
   await this.processCompletedMeetingForRAG();
 }
 ```
 
-### События и широковещательная передача
+### Events and Broadcasting
 
-`AppState` использует шину событий для коммуникации с интерфейсом:
+`AppState` uses an event bus for communication with the interface:
 
 ```typescript
 private broadcast(channel: string, ...args: any[]): void {
@@ -106,51 +106,51 @@ private broadcast(channel: string, ...args: any[]): void {
 }
 ```
 
-Основные события:
-- `update-available` - доступно новое обновление
-- `native-audio-transcript` - новая транскрипция
-- `intelligence-suggested-answer` - предложенный ответ от ИИ
-- `screenshot-taken` - сделан скриншот
-- `undetectable-changed` - изменение режима невидимости
-- `disguise-changed` - изменение маскировки
+Main events:
+- `update-available` - new update available
+- `native-audio-transcript` - new transcription
+- `intelligence-suggested-answer` - AI suggested answer
+- `screenshot-taken` - screenshot taken
+- `undetectable-changed` - stealth mode changed
+- `disguise-changed` - disguise changed
 
-### Управление конфигурацией
+### Configuration Management
 
-#### Переконфигурация аудио
+#### Audio Reconfiguration
 ```typescript
 public async reconfigureAudio(inputDeviceId?: string, outputDeviceId?: string): Promise<void> {
-  // Остановка существующих захватов
+  // Stop existing captures
   this.systemAudioCapture?.stop();
   this.microphoneCapture?.stop();
   
-  // Создание новых с указанными устройствами
+  // Create new ones with specified devices
   this.systemAudioCapture = new SystemAudioCapture(outputDeviceId);
   this.microphoneCapture = new MicrophoneCapture(inputDeviceId);
 }
 ```
 
-#### Переконфигурация STT-провайдера
+#### STT Provider Reconfiguration
 ```typescript
 public async reconfigureSttProvider(): Promise<void> {
-  // Остановка и очистка существующих STT
+  // Stop and clean up existing STT
   this.googleSTT?.stop();
   this.googleSTT?.removeAllListeners();
   this.googleSTT = null;
   
-  // Повторная инициализация пайплайна
+  // Reinitialize pipeline
   this.setupSystemAudioPipeline();
 }
 ```
 
-### Режимы безопасности и приватности
+### Security and Privacy Modes
 
-#### Режим невидимости
+#### Stealth Mode
 ```typescript
 public setUndetectable(state: boolean): void {
   this.isUndetectable = state;
   this.windowHelper.setContentProtection(state);
   
-  // Применение маскировки
+  // Apply disguise
   if (state && this.disguiseMode !== 'none') {
     this._applyDisguise(this.disguiseMode);
   } else if (!state) {
@@ -159,7 +159,7 @@ public setUndetectable(state: boolean): void {
 }
 ```
 
-#### Маскировка приложения
+#### Application Disguise
 ```typescript
 private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): void {
   let appName = "";
@@ -170,20 +170,20 @@ private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): voi
     default: appName = "Natively";
   }
   
-  // Изменение названия процесса
+  // Change process name
   process.title = appName;
   app.setName(appName);
   
-  // Изменение иконки
+  // Change icon
   const image = nativeImage.createFromPath(iconPath);
   app.dock.setIcon(image); // macOS
   
-  // Изменение заголовков окон
+  // Change window titles
   launcher.setTitle(appName.trim());
 }
 ```
 
-### Управление обновлениями
+### Update Management
 
 ```typescript
 private setupAutoUpdater(): void {
@@ -198,33 +198,33 @@ private setupAutoUpdater(): void {
 }
 
 public async quitAndInstallUpdate(): Promise<void> {
-  // Особая обработка для macOS
+  // Special handling for macOS
   if (process.platform === 'darwin') {
-    // Открытие папки с обновлением
+    // Open update folder
     await shell.openPath(updateDir);
     setTimeout(() => app.quit(), 1000);
     return;
   }
   
-  // Стандартная установка для других ОС
+  // Standard installation for other OS
   autoUpdater.quitAndInstall(false, true);
 }
 ```
 
-### Интеграция с системными сервисами
+### System Services Integration
 
-#### Глобальные горячие клавиши
+#### Global Hotkeys
 ```typescript
-// В initializeApp()
+// In initializeApp()
 KeybindManager.getInstance().registerGlobalShortcuts()
 
-// Обновление меню трэя при изменениях
+// Update tray menu on changes
 keybindManager.onUpdate(() => {
   this.updateTrayMenu();
 });
 ```
 
-#### Работа с треем
+#### Tray Operations
 ```typescript
 public createTray(): void {
   this.tray = new Tray(trayIcon)
@@ -242,7 +242,7 @@ private updateTrayMenu() {
 }
 ```
 
-### Безопасность и очистка памяти
+### Security and Memory Cleanup
 
 ```typescript
 app.on("before-quit", () => {
@@ -251,9 +251,9 @@ app.on("before-quit", () => {
 })
 ```
 
-Несмотря на попытки очистки, в JavaScript невозможно гарантированно удалить данные из памяти из-за особенностей работы Garbage Collector.
+Despite cleanup attempts, in JavaScript it is impossible to guaranteedly remove data from memory due to Garbage Collector behavior.
 
-### Логирование
+### Logging
 
 ```typescript
 async function logToFile(msg: string) {
@@ -263,7 +263,7 @@ async function logToFile(msg: string) {
   } catch (e) { /* Ignore */ }
 }
 
-// Переопределение console.log для записи в файл
+// Override console.log for file writing
 console.log = (...args: any[]) => {
   const msg = args.map(a => (a instanceof Error) ? a.stack || a.message : 
     (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
@@ -272,29 +272,28 @@ console.log = (...args: any[]) => {
 };
 ```
 
-### Инициализация приложения
+### Application Initialization
 
 ```typescript
 async function initializeApp() {
   await app.whenReady()
   
-  // Инициализация менеджеров
+  // Initialize managers
   CredentialsManager.getInstance().init();
   const appState = AppState.getInstance()
   
-  // Настройка IPC-обработчиков
+  // Setup IPC handlers
   initializeIpcHandlers(appState)
   
-  // Создание окон
+  // Create windows
   appState.createWindow()
   
-  // Регистрация глобальных горячих клавиш
+  // Register global hotkeys
   KeybindManager.getInstance().registerGlobalShortcuts()
   
-  // Предварительная загрузка окна настроек
+  // Preload settings window
   appState.settingsWindowHelper.preloadWindow()
 }
 ```
 
-`AppState` представляет собой сложный, многофункциональный класс, который объединяет все компоненты приложения в единую согласованную систему, обеспечивая стабильную работу Natively как мощного ИИ-ассистента для профессиональных встреч.
-
+`AppState` represents a complex, multi-functional class that unifies all application components into a single coherent system, ensuring stable operation of Natively as a powerful AI assistant for professional meetings.

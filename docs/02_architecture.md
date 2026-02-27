@@ -1,198 +1,198 @@
-## 2. Архитектура приложения
+## 2. Application Architecture
 
-Natively построен как классическое Electron-приложение с разделением на **основной процесс (main process)** и **процесс рендеринга (renderer process)**, но с продвинутой архитектурой, ориентированной на производительность, безопасность и приватность.
+Natively is built as a classic Electron application with a separation between the **main process** and **renderer process**, but with an advanced architecture focused on performance, security, and privacy.
 
-### Основные компоненты архитектуры
+### Main Architecture Components
 
-#### Центральный менеджер состояния (AppState)
-Класс `AppState` является ядром приложения и реализован как **Singleton** в [`electron/main.ts`](electron/main.ts:81), обеспечивая единый источник правды для всех компонентов системы. Он координирует работу всех модулей:
-- Управление окнами
-- Аудио-захват и обработка речи
-- Интеллектуальная обработка через ИИ
-- Система уведомлений и событий
-- Обновления и установка
-- Хранение и индексация данных
+#### Central State Manager (AppState)
+The `AppState` class is the core of the application and is implemented as a **Singleton** in [`electron/main.ts`](electron/main.ts:81), providing a single source of truth for all system components. It coordinates the work of all modules:
+- Window management
+- Audio capture and speech processing
+- Intelligent AI processing
+- Notification and event system
+- Updates and installation
+- Data storage and indexing
 
-#### Модульная структура
-Приложение организовано в виде набора взаимодействующих модулей:
+#### Modular Structure
+The application is organized as a set of interacting modules:
 
 ```
-electron/                      # Основной процесс Electron
-├── main.ts                   # Точка входа, AppState (Singleton)
-├── preload.ts                # Preload скрипт для безопасного IPC
-├── WindowHelper.ts           # Управление окнами
-├── SettingsWindowHelper.ts  # Окно настроек
-├── ModelSelectorWindowHelper.ts # Окно выбора модели
-├── ipcHandlers.ts            # Обработчики IPC-сообщений
-├── IntelligenceManager.ts   # Менеджер ИИ-функций
-├── LLMHelper.ts             # Помощник для работы с LLM
-├── ProcessingHelper.ts      # Обработка данных
-├── ScreenshotHelper.ts      # Захват скриншотов
-├── DonationManager.ts        # Управление донатами
-├── ThemeManager.ts          # Управление темами
+electron/                      # Electron main process
+├── main.ts                   # Entry point, AppState (Singleton)
+├── preload.ts                # Preload script for secure IPC
+├── WindowHelper.ts           # Window management
+├── SettingsWindowHelper.ts  # Settings window
+├── ModelSelectorWindowHelper.ts # Model selection window
+├── ipcHandlers.ts            # IPC message handlers
+├── IntelligenceManager.ts   # AI functions manager
+├── LLMHelper.ts             # LLM helper
+├── ProcessingHelper.ts      # Data processing
+├── ScreenshotHelper.ts      # Screenshot capture
+├── DonationManager.ts        # Donation management
+├── ThemeManager.ts          # Theme management
 │
-├── audio/                    # Аудио-система
-│   ├── SystemAudioCapture.ts   # Захват системного звука
-│   ├── MicrophoneCapture.ts    # Захват микрофона
-│   ├── GoogleSTT.ts            # Google Speech-to-Text
-│   ├── RestSTT.ts              # REST-based STT провайдеры
-│   ├── DeepgramStreamingSTT.ts # Deepgram streaming STT
-│   └── AudioDevices.ts         # Управление аудио-устройствами
+├── audio/                    # Audio system
+│   ├── SystemAudioCapture.ts   # System audio capture
+│   ├── MicrophoneCapture.ts    # Microphone capture
+│   ├── GoogleSTT            # Google Speech-to-Text
+│   ├── RestSTT              # REST-based STT providers
+│   ├── DeepgramStreamingSTT # Deepgram streaming STT
+│   └── AudioDevices.ts         # Audio device management
 │
-├── llm/                      # LLM модули
-│   ├── LLMHelper.ts          # Основной helper для LLM
-│   ├── IntentClassifier.ts   # Классификатор намерений
-│   ├── AnswerLLM.ts          # Генерация ответов
-│   ├── AssistLLM.ts          # Помощник ИИ
-│   ├── RecapLLM.ts           # Генерация резюме
-│   ├── FollowUpLLM.ts        # Follow-up вопросы
-│   ├── FollowUpQuestionsLLM.ts # Генерация уточняющих вопросов
-│   ├── WhatToAnswerLLM.ts    # Определение что отвечать
-│   ├── TemporalContextBuilder.ts # Контекст времени
-│   ├── transcriptCleaner.ts  # Очистка транскриптов
-│   ├── postProcessor.ts      # Пост-обработка
-│   ├── prompts.ts            # Промпты для LLM
-│   ├── types.ts              # TypeScript типы
-│   └── index.ts              # Экспорт модулей
+├── llm/                      # LLM modules
+│   ├── LLMHelper.ts          # Main LLM helper
+│   ├── IntentClassifier.ts   # Intent classifier
+│   ├── AnswerLLM.ts          # Answer generation
+│   ├── AssistLLM.ts          # AI assistant
+│   ├── RecapLLM.ts           # Summary generation
+│   ├── FollowUpLLM.ts        # Follow-up questions
+│   ├── FollowUpQuestionsLLM.ts # Clarifying questions generator
+│   ├── WhatToAnswerLLM.ts    # Determine what to answer
+│   ├── TemporalContextBuilder.ts # Time context
+│   ├── transcriptCleaner.ts  # Transcript cleaning
+│   ├── postProcessor.ts      # Post-processing
+│   ├── prompts.ts            # LLM prompts
+│   ├── types.ts              # TypeScript types
+│   └── index.ts              # Module exports
 │
-├── services/                 # Сервисные компоненты
-│   ├── KeybindManager.ts     # Управление горячими клавишами
-│   ├── CredentialsManager.ts # Безопасное хранение учетных данных
-│   ├── CalendarManager.ts    # Интеграция с календарем
-│   ├── InstallPingManager.ts # Пинг при установке
-│   └── RateLimiter.ts        # Ограничение частоты запросов
+├── services/                 # Service components
+│   ├── KeybindManager.ts     # Hotkey management
+│   ├── CredentialsManager.ts # Secure credential storage
+│   ├── CalendarManager.ts    # Calendar integration
+│   ├── InstallPingManager.ts # Install ping
+│   └── RateLimiter.ts        # Rate limiting
 │
-├── db/                       # Работа с базой данных
-│   ├── DatabaseManager.ts    # Управление SQLite
-│   ├── seedDemo.ts           # Демо-данные
-│   └── test-db.ts            # Тестирование БД
+├── db/                       # Database
+│   ├── DatabaseManager.ts    # SQLite management
+│   ├── seedDemo.ts           # Demo data
+│   └── test-db.ts            # DB testing
 │
-├── rag/                      # RAG-система
-│   ├── RAGManager.ts         # Менеджер RAG
-│   ├── RAGRetriever.ts       # Получение релевантных данных
-│   ├── EmbeddingPipeline.ts  # Конвейер эмбеддингов
-│   ├── VectorStore.ts        # Векторное хранилище
-│   ├── SemanticChunker.ts    # Семантическая разбивка
-│   ├── TranscriptPreprocessor.ts # Препроцессор транскриптов
-│   ├── prompts.ts            # Промпты для RAG
-│   └── index.ts              # Экспорт модулей
+├── rag/                      # RAG system
+│   ├── RAGManager.ts         # RAG manager
+│   ├── RAGRetriever.ts       # Relevant data retrieval
+│   ├── EmbeddingPipeline.ts  # Embedding pipeline
+│   ├── VectorStore.ts        # Vector storage
+│   ├── SemanticChunker.ts    # Semantic chunking
+│   ├── TranscriptPreprocessor.ts # Transcript preprocessor
+│   ├── prompts.ts            # RAG prompts
+│   └── index.ts              # Module exports
 │
-├── update/                   # Обновления
-│   └── ReleaseNotesManager.ts # Управление релизами
+├── update/                   # Updates
+│   └── ReleaseNotesManager.ts # Release notes management
 │
-├── config/                   # Конфигурация
-│   └── languages.ts          # Поддерживаемые языки
+├── config/                   # Configuration
+│   └── languages.ts          # Supported languages
 │
-└── utils/                    # Утилиты
-    ├── logger.ts             # Логирование (electron-log)
-    ├── curlUtils.ts          # Curl утилиты
-    └── emailUtils.ts         # Email утилиты
+└── utils/                    # Utilities
+    ├── logger.ts             # Logging (electron-log)
+    ├── curlUtils.ts          # Curl utilities
+    └── emailUtils.ts         # Email utilities
 ```
 
-#### Структура рендер-процесса (Renderer)
+#### Renderer Process Structure
 
 ```
 src/
-├── components/               # React компоненты
-│   ├── Launcher.tsx          # Главный компонент запуска
-│   ├── NativelyInterface.tsx # Основной интерфейс
-│   ├── SettingsOverlay.tsx   # Оверлей настроек
-│   ├── SettingsPopup.tsx     # Всплывающее окно настроек
-│   ├── MeetingDetails.tsx    # Детали встречи
-│   ├── GlobalChatOverlay.tsx  # Глобальный чат
-│   ├── MeetingChatOverlay.tsx # Чат встречи
-│   ├── FollowUpEmailModal.tsx # Модалка follow-up email
-│   ├── FeatureSpotlight.tsx   # Демонстрация функций
-│   ├── TopSearchPill.tsx      # Поисковая строка
-│   ├── UpdateBanner.tsx       # Баннер обновлений
-│   ├── UpdateModal.tsx        # Модалка обновлений
+├── components/               # React components
+│   ├── Launcher.tsx          # Main launcher component
+│   ├── NativelyInterface.tsx # Main interface
+│   ├── SettingsOverlay.tsx   # Settings overlay
+│   ├── SettingsPopup.tsx     # Settings popup
+│   ├── MeetingDetails.tsx    # Meeting details
+│   ├── GlobalChatOverlay.tsx  # Global chat
+│   ├── MeetingChatOverlay.tsx # Meeting chat
+│   ├── FollowUpEmailModal.tsx # Follow-up email modal
+│   ├── FeatureSpotlight.tsx   # Feature demonstration
+│   ├── TopSearchPill.tsx      # Search bar
+│   ├── UpdateBanner.tsx       # Update banner
+│   ├── UpdateModal.tsx        # Update modal
 │   │
-│   ├── Queue/                 # Очередь скриншотов
-│   ├── Solutions/            # Решения
-│   ├── settings/              # Настройки UI
+│   ├── Queue/                 # Screenshot queue
+│   ├── Solutions/            # Solutions
+│   ├── settings/              # UI settings
 │   │   ├── AIProvidersSettings.tsx
 │   │   ├── GeneralSettings.tsx
 │   │   └── Sidebar.tsx
-│   └── ui/                    # Переиспользуемые UI компоненты
+│   └── ui/                    # Reusable UI components
 │
-├── _pages/                   # Страницы
-│   ├── Debug.tsx             # Страница отладки
-│   ├── Queue.tsx             # Страница очереди
-│   └── Solutions.tsx         # Страница решений
+├── _pages/                   # Pages
+│   ├── Debug.tsx             # Debug page
+│   ├── Queue.tsx             # Queue page
+│   └── Solutions.tsx         # Solutions page
 │
-├── App.tsx                   # Корневой компонент
-├── main.tsx                  # Точка входа React
-└── index.css                 # Глобальные стили
+├── App.tsx                   # Root component
+├── main.tsx                  # React entry point
+└── index.css                 # Global styles
 ```
 
-### Потоки выполнения
+### Execution Flows
 
-#### Основной процесс (Main Process)
-Отвечает за:
-- Создание и управление окнами браузера
-- Системные интеграции (иконка в трее, глобальные горячие клавиши)
-- Захват аудио и экрана
-- Работу с файловой системой
-- Обновления приложения
-- Координацию между различными сервисами
-- Логирование через [`electron-log`](electron/utils/logger.ts:1)
+#### Main Process
+Responsible for:
+- Creating and managing browser windows
+- System integrations (tray icon, global hotkeys)
+- Audio and screen capture
+- File system operations
+- Application updates
+- Coordination between different services
+- Logging via [`electron-log`](electron/utils/logger.ts:1)
 
-#### Процесс рендеринга (Renderer Process)
-Реализован как современное React-приложение на Vite:
-- Интерфейс пользователя
-- Отображение транскрипций и рекомендаций ИИ
-- Управление настройками
-- Доступ к истории встреч
-- Визуализация аналитики и использования API
+#### Renderer Process
+Implemented as a modern React application on Vite:
+- User interface
+- Display of transcriptions and AI recommendations
+- Settings management
+- Access to meeting history
+- Visualization of analytics and API usage
 
-### Система событий и коммуникации
+### Event and Communication System
 
-Между основным и рендер-процессами используется IPC (Inter-Process Communication) для безопасного взаимодействия:
+IPC (Inter-Process Communication) is used between main and renderer processes for secure interaction:
 
 ```typescript
-// Пример: отправка события из основного процесса
+// Example: sending event from main process
 this.broadcast("update-available", info)
 
-// Пример: обработка в рендер-процессе
+// Example: handling in renderer process
 ipcRenderer.on('intelligence-suggested-answer', handleSuggestedAnswer)
 ```
 
-Также реализована система внутренних событий через EventEmitter для связи между модулями основного процесса:
-- `startMeeting` / `endMeeting` - начало и завершение встречи
-- `assist_update` - обновление рекомендаций ИИ
-- `suggested_answer` - предложенный ответ
-- `recap` - сводка встречи
-- `follow_up_questions_update` - вопросы для уточнения
+An internal event system using EventEmitter is also implemented for communication between main process modules:
+- `startMeeting` / `endMeeting` - meeting start and end
+- `assist_update` - AI recommendations update
+- `suggested_answer` - suggested answer
+- `recap` - meeting summary
+- `follow_up_questions_update` - clarifying questions
 
-### Жизненный цикл приложения
+### Application Lifecycle
 
-1. **Инициализация**: инициализация логирования, загрузка конфигурации, проверка обновлений, создание экземпляра `AppState`
-2. **Готовность**: создание главного окна, регистрация глобальных горячих клавиш
-3. **Активность**: работа с аудио-потоками, обработка речи, генерация рекомендаций
-4. **Завершение**: сохранение состояния, очистка памяти, выход
+1. **Initialization**: logging initialization, configuration loading, update checking, AppState instance creation
+2. **Ready**: main window creation, global hotkey registration
+3. **Active**: working with audio streams, speech processing, recommendations generation
+4. **Shutdown**: state saving, memory cleanup, exit
 
-### Управление ресурсами
+### Resource Management
 
-Приложение эффективно управляет ресурсами:
-- **Ленивая инициализация** компонентов (например, аудио-конвейер создается только при необходимости)
-- **Переконфигурация "на лету"** аудио-устройств и STT-провайдеров
-- **Очистка ресурсов** при завершении встречи или выходе из приложения
-- **Обработка ошибок** и восстановление после сбоев (через electron-log)
+The application efficiently manages resources:
+- **Lazy initialization** of components (e.g., audio pipeline is created only when needed)
+- **Live reconfiguration** of audio devices and STT providers
+- **Resource cleanup** when meeting ends or application exits
+- **Error handling** and recovery from failures (via electron-log)
 
-### Система логирования
+### Logging System
 
-Логирование реализовано через [`electron-log`](electron/utils/logger.ts:1) в отдельном модуле:
-- Запись в файл `natively_debug.log` в папке Documents
-- Вывод в консоль с форматированием
-- Перехват `console.log/warn/error` для автоматического логирования
-- Глобальные обработчики `uncaughtException` и `unhandledRejection`
+Logging is implemented via [`electron-log`](electron/utils/logger.ts:1) in a separate module:
+- Writing to `natively_debug.log` in Documents folder
+- Console output with formatting
+- Intercepting `console.log/warn/error` for automatic logging
+- Global handlers for `uncaughtException` and `unhandledRejection`
 
-### Архитектурные паттерны
+### Architectural Patterns
 
 - **Singleton**: `AppState`, `CredentialsManager`, `DatabaseManager`
-- **Observer/Pub-Sub**: система событий между компонентами
-- **Dependency Injection**: передача зависимостей между модулями
-- **Factory**: динамическое создание STT-провайдеров в зависимости от настроек
-- **Facade**: `WindowHelper` предоставляет унифицированный интерфейс управления окнами
+- **Observer/Pub-Sub**: event system between components
+- **Dependency Injection**: passing dependencies between modules
+- **Factory**: dynamic STT provider creation based on settings
+- **Facade**: `WindowHelper` provides unified window management interface
 
-Эта архитектура позволяет Natively быть одновременно мощным и гибким, поддерживая сложную функциональность при сохранении высокой производительности и безопасности.
+This architecture allows Natively to be both powerful and flexible, supporting complex functionality while maintaining high performance and security.

@@ -1,22 +1,22 @@
-## 8. Безопасность и приватность
+## 8. Security and Privacy
 
-Natively построен на фундаментальном принципе **"приватность по дизайну" (Privacy by Design)**, что делает его особенно ценным инструментом для профессиональных сценариев, где конфиденциальность данных критически важна.
+Natively is built on the fundamental principle of **"Privacy by Design"**, making it a particularly valuable tool for professional scenarios where data confidentiality is critical.
 
-### Ключевые принципы безопасности
+### Key Security Principles
 
-#### Полностью локальная обработка
-- **Все данные остаются на устройстве пользователя**: аудио, транскрипции, скриншоты, векторные эмбеддинги
-- **Нет внешних серверов**: приложение не имеет бэкенда, который мог бы хранить или анализировать данные
-- **Локальная база данных**: SQLite используется для хранения всей информации о встречах
-- **Локальный RAG**: система Retrieval Augmented Generation работает полностью локально
+#### Fully Local Processing
+- **All data stays on user's device**: audio, transcripts, screenshots, vector embeddings
+- **No external servers**: the application has no backend that could store or analyze data
+- **Local database**: SQLite is used to store all meeting information
+- **Local RAG**: Retrieval Augmented Generation system works completely locally
 
-#### Отсутствие телеметрии
-- **Никакой аналитики**: приложение не собирает никакую информацию о поведении пользователя
-- **Нет отслеживания**: не регистрируются действия, время использования, частота запусков
-- **Неограниченное использование**: нет подписок, платных планов или скрытых платежей
+#### No Telemetry
+- **No analytics**: the application doesn't collect any user behavior information
+- **No tracking**: actions, usage time, launch frequency are not logged
+- **Unlimited usage**: no subscriptions, paid plans, or hidden fees
 
 #### Bring Your Own Keys (BYOK)
-- Пользователь предоставляет свои собственные API-ключи для облачных сервисов:
+- User provides their own API keys for cloud services:
   - Gemini
   - OpenAI
   - Anthropic
@@ -26,8 +26,8 @@ Natively построен на фундаментальном принципе *
   - ElevenLabs
   - Azure
   - IBM Watson
-- Ключи используются только локально и **никогда не покидают устройство**
-- При выходе из приложения ключи очищаются из памяти
+- Keys are used locally only and **never leave the device**
+- Keys are cleared from memory when exiting the application
 
 ```typescript
 app.on("before-quit", () => {
@@ -36,10 +36,10 @@ app.on("before-quit", () => {
 })
 ```
 
-### Архитектура безопасности
+### Security Architecture
 
-#### Модуль CredentialsManager
-Центральный менеджер учетных данных обеспечивает безопасное хранение:
+#### CredentialsManager Module
+The central credentials manager provides secure storage:
 
 ```typescript
 class CredentialsManager {
@@ -49,33 +49,33 @@ class CredentialsManager {
   private claudeApiKey: string | null = null;
   private googleServiceAccountPath: string | null = null;
   private deepgramApiKey: string | null = null;
-  // ... другие провайдеры
+  // ... other providers
 }
 ```
 
-**Методы безопасности:**
-- `init()`: загрузка ключей из зашифрованного хранилища ОС
-- `scrubMemory()`: попытка очистки ключей из памяти перед выходом
-- `get*ApiKey()`: безопасное получение ключей по запросу
+**Security Methods:**
+- `init()`: load keys from encrypted OS storage
+- `scrubMemory()`: attempt to clear keys from memory before exit
+- `get*ApiKey()`: secure key retrieval on request
 
-#### Локальное хранилище
-- Используются системные механизмы хранения секретов:
-  - **macOS Keychain** для безопасного хранения API-ключей
-  - **Windows Credential Vault** для Windows
-  - **libsecret** для Linux
-- Конфигурация через `.env` файл только для разработки
+#### Local Storage
+- System secret storage mechanisms are used:
+  - **macOS Keychain** for secure API key storage
+  - **Windows Credential Vault** for Windows
+  - **libsecret** for Linux
+- Configuration via `.env` file only for development
 
-#### Работа с файловой системой
-- Все данные хранятся в пользовательских директориях:
-  - Документы (`app.getPath('documents')`)
-  - Данные приложения (`app.getPath('userData')`)
-  - Кэш (`app.getPath('cache')`)
-- Никакие данные не отправляются в облако без явного согласия пользователя
+#### File System Operations
+- All data is stored in user directories:
+  - Documents (`app.getPath('documents')`)
+  - Application Data (`app.getPath('userData')`)
+  - Cache (`app.getPath('cache')`)
+- No data is sent to cloud without explicit user consent
 
-### Режимы приватности
+### Privacy Modes
 
-#### Stealth Mode 2.0 (Режим невидимости)
-Продвинутая система маскировки для ситуаций, когда требуется скрыть использование ассистента:
+#### Stealth Mode 2.0
+Advanced disguise system for situations requiring hiding assistant usage:
 
 ```typescript
 public setUndetectable(state: boolean): void {
@@ -90,14 +90,14 @@ public setUndetectable(state: boolean): void {
 }
 ```
 
-**Особенности:**
-- Скрытие из дока (macOS) или панели задач (Windows)
-- Блокировка скриншотов
-- Отключение уведомлений
-- Установка флага `accessory` для macOS
+**Features:**
+- Hiding from dock (macOS) or taskbar (Windows)
+- Screenshot blocking
+- Disabling notifications
+- Setting `accessory` flag for macOS
 
-#### Disguise Mode (Маскировка)
-Система маскировки под системные утилиты:
+#### Disguise Mode
+System for disguising as system utilities:
 
 ```typescript
 private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): void {
@@ -111,77 +111,75 @@ private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): voi
   
   process.title = appName;
   app.setName(appName);
-  // ... обновление иконок и заголовков
+  // ... update icons and titles
 }
 ```
 
-**Доступные варианты:**
-- **Terminal**: маскировка под терминал
-- **System Settings**: маскировка под системные настройки
-- **Activity Monitor**: маскировка под монитор активности
-- **None**: стандартное отображение
+**Available Options:**
+- **Terminal**: disguise as terminal
+- **System Settings**: disguise as system settings
+- **Activity Monitor**: disguise as activity monitor
+- **None**: standard display
 
-### Защита данных
+### Data Protection
 
-#### Шифрование и хранение
-- **API-ключи**: хранятся в защищенном хранилище ОС (Keychain, Credential Vault)
-- **Транскрипции и заметки**: хранятся в SQLite базе данных в директории пользователя
-- **Скриншоты**: временные файлы в кэше, могут быть удалены пользователем
+#### Encryption and Storage
+- **API keys**: stored in secure OS storage (Keychain, Credential Vault)
+- **Transcripts and notes**: stored in SQLite database in user directory
+- **Screenshots**: temporary files in cache, can be deleted by user
 
-#### Управление доступом
-- **Глобальные горячие клавиши**: могут быть полностью настроены пользователем
-- **Контроль над захватом экрана**: пользователь должен явно разрешить доступ к экрану в настройках ОС
-- **Контроль над микрофоном**: аналогично, требуется явное разрешение ОС
+#### Access Control
+- **Global hotkeys**: can be fully customized by user
+- **Screen capture control**: user must explicitly allow screen access in OS settings
+- **Microphone control**: similarly, requires explicit OS permission
 
-### Обработка ошибок и отказоустойчивость
+### Error Handling and Fault Tolerance
 
-#### Обработка сбоев
+#### Failure Handling
 ```typescript
-// В setupSystemAudioPipeline()
+// In setupSystemAudioPipeline()
 try {
-  // Инициализация аудио-каналов
+  // Initialize audio channels
 } catch (err) {
   console.error('[Main] Failed to setup System Audio Pipeline:', err);
-  // Fallback на дефолтные устройства
+  // Fallback to default devices
 }
 ```
 
-#### Автоматическое восстановление
-- При сбое STT-провайдера происходит fallback на GoogleSTT
-- При проблемах с устройствами используется автоматический выбор
-- Поддержка переконфигурации "на лету"
+#### Automatic Recovery
+- When STT provider fails, fallback to GoogleSTT occurs
+- When device problems occur, automatic selection is used
+- Live reconfiguration support
 
-### Ограничения безопасности
+### Security Limitations
 
-#### Проблемы с JavaScript
-- **Невозможность гарантированной очистки памяти**: в JavaScript невозможно принудительно удалить данные из памяти из-за особенностей работы Garbage Collector
-- **Ограничения IPC**: коммуникация между процессами требует передачи данных, что потенциально может создать уязвимости
-- **Зависимость от Electron**: уязвимости в Chromium или Node.js могут повлиять на безопасность
+#### JavaScript Issues
+- **Impossible guaranteed memory cleanup**: in JavaScript, it's impossible to forcibly remove data from memory due to Garbage Collector behavior
+- **IPC limitations**: inter-process communication requires data transfer, which could potentially create vulnerabilities
+- **Electron dependency**: vulnerabilities in Chromium or Node.js could affect security
 
-#### Зависимости сторонних сервисов
-- **Облачные провайдеры**: при использовании Gemini, OpenAI и других облачных сервисов, данные передаются третьим лицам
-- **API-ключи**: хотя они хранятся локально, их компрометация может привести к злоупотреблению ресурсами пользователя
+#### Third-Party Service Dependencies
+- **Cloud providers**: when using Gemini, OpenAI, and other cloud services, data is transmitted to third parties
+- **API keys**: although stored locally, their compromise could lead to abuse of user's resources
 
-### Лицензирование и открытый исходный код
+### Licensing and Open Source
 
 #### AGPL-3.0 License
-- **Полная прозрачность**: весь исходный код доступен для проверки
-- **Защита от закрытия**: если приложение модифицируется и используется по сети, полный исходный код должен быть открыт
-- **Отсутствие скрытых функций**: невозможность добавления шпионского ПО без ведома сообщества
+- **Complete transparency**: all source code is available for review
+- **Protection against closing**: if the application is modified and used over a network, full source code must be open
+- **No hidden features**: impossible to add spyware without community knowledge
 
-#### Аудит безопасности
-- Возможность независимого аудита кода любым разработчиком
-- Сообщество может выявлять и исправлять уязвимости
-- Прозрачность реализации всех критических функций
+#### Security Audit
+- Possibility of independent code audit by any developer
+- Community can identify and fix vulnerabilities
+- Transparency of all critical functions implementation
 
-### Рекомендации по безопасному использованию
+### Recommendations for Secure Usage
 
-1. **Используйте Ollama для полной автономности**: подключение к локальным моделям исключает передачу данных третьим лицам
-2. **Регулярно меняйте API-ключи**: особенно при работе на общих или незащищенных устройствах
-3. **Используйте режим невидимости**: когда это необходимо для соблюдения политики компании
-4. **Очищайте историю встреч**: при необходимости удалите чувствительные данные
-5. **Будьте внимательны к настройкам ОС**: контролируйте разрешения на доступ к микрофону, камере и экрану
+1. **Use Ollama for complete autonomy**: connecting to local models eliminates data transmission to third parties
+2. **Regularly change API keys**: especially when working on shared or unprotected devices
+3. **Use stealth mode**: when necessary to comply with company policies
+4. **Clean meeting history**: delete sensitive data when necessary
+5. **Be attentive to OS settings**: control permissions for microphone, camera, and screen access
 
-Natively представляет собой редкий пример баланса между мощными функциями ИИ и строгими требованиями к приватности, делая его одним из самых безопасных решений в своем классе.
-
-
+Natively represents a rare example of balance between powerful AI features and strict privacy requirements, making it one of the most secure solutions in its class.

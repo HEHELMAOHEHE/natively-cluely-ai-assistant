@@ -1,35 +1,36 @@
-﻿## 1. Общее описание и ключевые особенности
-Natively — это бесплатный, ориентированный на приватность десктопный AI-ассистент для встреч, собеседований, презентаций и профессиональных разговоров. Проект позиционируется как open-source альтернатива коммерческим решениям вроде Cluely, но с акцентом на локальную обработку данных и полный контроль пользователя над своими API-ключами.
-Основные возможности:
+﻿## 1. General Description and Key Features
 
-    Реальное время: транскрипция, анализ и генерация ответов происходят во время встречи
-    Поддержка платформ: работает с Zoom, Google Meet, Microsoft Teams, Slack, Discord и другими приложениями
-    Локальная первичность: все данные хранятся и обрабатываются исключительно на устройстве пользователя
-    Отсутствие телеметрии: не собирается никакая аналитика, поведение не отслеживается
-    Гибкие AI-провайдеры: поддержка множества облачных и локальных моделей ИИ
+Natively is a free, privacy-focused desktop AI assistant for meetings, interviews, presentations, and professional conversations. The project positions itself as an open-source alternative to commercial solutions like Cluely, but with an emphasis on local data processing and full user control over their API keys.
 
-Ключевые особенности:
+Key Features:
 
-    Local RAG (Retrieval Augmented Generation): локальная векторная база данных для поиска по истории встреч ("Что Джон говорил об API на прошлой неделе?")
-    Двойной аудио-канал: отдельная обработка системного звука (собеседники) и микрофона (пользователь)
-    Анализ скриншотов: понимание слайдов, кода, диаграмм и других визуальных материалов
-    Режим невидимости (Stealth Mode): возможность маскировки под системные утилиты (Terminal, Activity Monitor)
-    Полностью кастомизируемые горячие клавиши: глобальные сочетания для управления интерфейсом
+- Real-time: transcription, analysis, and response generation happen during the meeting
+- Platform Support: works with Zoom, Google Meet, Microsoft Teams, Slack, Discord, and other applications
+- Local-first: all data is stored and processed exclusively on the user's device
+- No Telemetry: no analytics collected, behavior not tracked
+- Flexible AI Providers: support for multiple cloud and local AI models
 
-Принципы дизайна:
+Key Highlights:
 
-    Bring Your Own Keys (BYOK): пользователь предоставляет свои API-ключи для Gemini, OpenAI, Anthropic и других провайдеров
-    100% открытый исходный код: лицензия AGPL-3.0
-    Неограниченное использование: нет подписок, платных планов или скрытых платежей
-    Контроль данных: ни аудио, ни транскрипции, ни скриншоты не покидают устройство без явного согласия пользователя
+- Local RAG (Retrieval Augmented Generation): local vector database for searching meeting history ("What did John say about API last week?")
+- Dual Audio Channel: separate processing of system audio (interlocutors) and microphone (user)
+- Screenshot Analysis: understanding slides, code, diagrams, and other visual materials
+- Stealth Mode: ability to disguise as system utilities (Terminal, Activity Monitor)
+- Fully Customizable Hotkeys: global shortcuts for interface control
 
-Сценарии использования:
+Design Principles:
 
-    Технические собеседования: помощь в формулировании ответов, напоминания о концепциях
-    Продажи и клиентские звонки: быстрое получение информации о продуктах, история взаимодействий
-    Ежедневные стендапы: автоматические заметки, выделение задач
-    Обучение и лекции: перевод, объяснение сложных тем, анализ материалов
-    Программирование: помощь в отладке, объяснение чужого кода, предложения решений
+- Bring Your Own Keys (BYOK): user provides their own API keys for Gemini, OpenAI, Anthropic, and other providers
+- 100% Open Source: AGPL-3.0 license
+- Unlimited Usage: no subscriptions, paid plans, or hidden fees
+- Data Control: neither audio, transcripts, nor screenshots leave the device without explicit user consent
 
-Natively предназначен для повышения продуктивности в профессиональной среде, сохраняя при этом максимальную приватность и контроль над данными.
+Use Cases:
 
+- Technical Interviews: help with formulating answers, reminders about concepts
+- Sales and Client Calls: quick product information retrieval, interaction history
+- Daily Standups: automatic notes, task extraction
+- Training and Lectures: translation, explanation of complex topics, material analysis
+- Programming: debugging help, code explanation, solution suggestions
+
+Natively is designed to enhance productivity in professional environments while maintaining maximum privacy and data control.

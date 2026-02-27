@@ -1,60 +1,60 @@
-## 4. Система аудио-захвата
+## 4. Audio Capture System
 
-Natively реализует продвинутую двухканальную систему захвата аудио, которая является ключевой особенностью приложения и обеспечивает его высокую эффективность в профессиональных сценариях.
+Natively implements an advanced dual-channel audio capture system, which is a key feature of the application and ensures high effectiveness in professional scenarios.
 
-### Архитектура аудио-системы
+### Audio System Architecture
 
-Система построена на разделении двух независимых аудио-потоков:
+The system is built on the separation of two independent audio streams:
 
-#### 1. Захват системного аудио (System Audio Capture)
-- **Назначение**: запись звука от собеседников в Zoom, Google Meet, Teams и других приложениях
-- **Реализация**: нативный модуль на Rust для прямого доступа к системным аудио-бассейнам
-- **Преимущества**:
-  - Высокое качество без помех от окружающего шума
-  - Отсутствие необходимости использовать микрофон для записи собеседников
-  - Низкая задержка обработки (<500 мс)
-  - Поддержка любых приложений (не только браузерные)
+#### 1. System Audio Capture
+- **Purpose**: recording sound from interlocutors in Zoom, Google Meet, Teams, and other applications
+- **Implementation**: native Rust module for direct access to system audio pools
+- **Advantages**:
+  - High quality without ambient noise interference
+  - No need to use microphone for recording interlocutors
+  - Low processing latency (<500 ms)
+  - Supports any applications (not just browser-based)
 
-#### 2. Захват микрофона (Microphone Capture)
-- **Назначение**: запись голоса пользователя для команд и диктовки
-- **Изолированный канал**: позволяет пользователю задавать частные вопросы ИИ, не взаимодействуя с основной встречей
-- **Глобальное переключение**: возможность мгновенного включения/выключения через горячие клавиши
+#### 2. Microphone Capture
+- **Purpose**: recording user's voice for commands and dictation
+- **Isolated Channel**: allows user to ask private AI questions without interacting with the main meeting
+- **Global Toggle**: ability to instantly enable/disable via hotkeys
 
-### Техническая реализация
+### Technical Implementation
 
-#### Основные компоненты
+#### Main Components
 
 ```typescript
-// В AppState.ts
+// In AppState.ts
 private systemAudioCapture: SystemAudioCapture | null = null;
 private microphoneCapture: MicrophoneCapture | null = null;
-private googleSTT: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // для собеседников
-private googleSTT_User: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // для пользователя
+private googleSTT: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // for interlocutors
+private googleSTT_User: GoogleSTT | RestSTT | DeepgramStreamingSTT | null = null; // for user
 ```
 
-#### Поток данных
+#### Data Flow
 
-**Для системного аудио:**
+**For system audio:**
 ```
 SystemAudioCapture → (Buffer) → STT (googleSTT) → transcript → IntelligenceManager → UI
 ```
 
-**Для микрофона:**
+**For microphone:**
 ```
 MicrophoneCapture → (Buffer) → STT (googleSTT_User) → transcript → IntelligenceManager → UI
 ```
 
-#### Ключевые методы
+#### Key Methods
 
 ```typescript
 private setupSystemAudioPipeline(): void {
-  // Инициализация захвата системного аудио
+  // Initialize system audio capture
   this.systemAudioCapture = new SystemAudioCapture();
   this.systemAudioCapture.on('data', (chunk: Buffer) => {
     this.googleSTT?.write(chunk);
   });
   
-  // Инициализация захвата микрофона
+  // Initialize microphone capture
   this.microphoneCapture = new MicrophoneCapture();
   this.microphoneCapture.on('data', (chunk: Buffer) => {
     this.googleSTT_User?.write(chunk);
@@ -62,20 +62,20 @@ private setupSystemAudioPipeline(): void {
 }
 ```
 
-### Поддержка различных провайдеров STT
+### STT Provider Support
 
-Система поддерживает множество Speech-to-Text провайдеров, которые могут быть выбраны пользователем:
+The system supports multiple Speech-to-Text providers that can be selected by users:
 
-#### Доступные провайдеры:
-- **Google Cloud Speech-to-Text**: через Service Account JSON
-- **Deepgram Streaming STT**: с поддержкой потоковой транскрипции
-- **Groq**: ультрабыстрое распознавание речи
-- **OpenAI Whisper**: точное распознавание через API OpenAI
-- **ElevenLabs**: высокоточное распознавание
-- **Azure Speech Services**: сервисы распознавания речи от Microsoft
-- **IBM Watson**: система распознавания речи от IBM
+#### Available Providers:
+- **Google Cloud Speech-to-Text**: via Service Account JSON
+- **Deepgram Streaming STT**: with streaming transcription support
+- **Groq**: ultra-fast speech recognition
+- **OpenAI Whisper**: precise recognition via OpenAI API
+- **ElevenLabs**: high-precision recognition
+- **Azure Speech Services**: Microsoft speech recognition services
+- **IBM Watson**: IBM speech recognition system
 
-#### Механизм выбора провайдера:
+#### Provider Selection Mechanism:
 ```typescript
 const sttProvider = CredentialsManager.getInstance().getSttProvider();
 
@@ -88,36 +88,36 @@ if (sttProvider === 'deepgram') {
 }
 ```
 
-### Управление устройствами
+### Device Management
 
-Пользователь может настраивать конкретные устройства ввода/вывода:
+Users can configure specific input/output devices:
 
 ```typescript
 public async reconfigureAudio(inputDeviceId?: string, outputDeviceId?: string): Promise<void> {
-  // Перенастройка захвата системного аудио
+  // Reconfigure system audio capture
   this.systemAudioCapture?.stop();
   this.systemAudioCapture = new SystemAudioCapture(outputDeviceId);
   
-  // Перенастройка захвата микрофона
+  // Reconfigure microphone capture
   this.microphoneCapture?.stop();
   this.microphoneCapture = new MicrophoneCapture(inputDeviceId);
 }
 ```
 
-### Динамическая переконфигурация
+### Dynamic Reconfiguration
 
-Система поддерживает изменение провайдеров "на лету":
+The system supports changing providers on the fly:
 
 ```typescript
 public async reconfigureSttProvider(): Promise<void> {
-  // Остановка существующих STT
+  // Stop existing STT
   this.googleSTT?.stop();
   this.googleSTT_User?.stop();
   
-  // Очистка и повторная инициализация
+  // Clear and reinitialize
   this.setupSystemAudioPipeline();
   
-  // Перезапуск при активной встрече
+  // Restart if meeting is active
   if (this.isMeetingActive) {
     this.googleSTT?.start();
     this.googleSTT_User?.start();
@@ -125,47 +125,47 @@ public async reconfigureSttProvider(): Promise<void> {
 }
 ```
 
-### Обработка ошибок и отказоустойчивость
+### Error Handling and Fault Tolerance
 
-Система включает механизмы восстановления при ошибках:
+The system includes error recovery mechanisms:
 
 ```typescript
 this.systemAudioCapture.on('error', (err: Error) => {
   console.error('[Main] SystemAudioCapture Error:', err);
-  // Автоматическое восстановление с fallback на дефолтное устройство
+  // Automatic recovery with fallback to default device
 });
 ```
 
-### Тестирование аудио
+### Audio Testing
 
-Встроенный тест уровня громкости для проверки работоспособности:
+Built-in volume level test for functionality verification:
 
 ```typescript
 public startAudioTest(deviceId?: string): void {
   this.audioTestCapture = new MicrophoneCapture(deviceId);
   this.audioTestCapture.on('data', (chunk: Buffer) => {
-    // Расчет RMS для визуального отображения уровня
+    // Calculate RMS for visual level display
     const level = Math.min(rms / 10000, 1.0);
     win.webContents.send('audio-level', level);
   });
 }
 ```
 
-### Особенности реализации
+### Implementation Details
 
-#### Ленивая инициализация
-Пайплайн аудио создается только при необходимости, что предотвращает потребление ресурсов при запуске:
+#### Lazy Initialization
+The audio pipeline is created only when needed, preventing resource consumption at startup:
 
 ```typescript
 // LAZY INIT: Do not setup pipeline here to prevent launch volume surge.
 // this.setupSystemAudioPipeline()
 ```
 
-#### Синхронизация частот дискретизации
-Критически важная синхронизация параметров между захватом и STT:
+#### Sample Rate Synchronization
+Critical synchronization of parameters between capture and STT:
 
 ```typescript
-// Синхронизация частоты дискретизации
+// Sample rate synchronization
 const sysRate = this.systemAudioCapture?.getSampleRate() || 16000;
 this.googleSTT?.setSampleRate(sysRate);
 
@@ -173,18 +173,17 @@ const micRate = this.microphoneCapture?.getSampleRate() || 16000;
 this.googleSTT_User?.setSampleRate(micRate);
 ```
 
-#### Разделение ролей
-Четкое разделение функций между двумя каналами:
-- **Канал 1 (system audio)**: анализ чужой речи, контекст встречи, понимание вопросов
-- **Канал 2 (microphone)**: частные запросы к ИИ, подготовка ответов, внутренние размышления
+#### Role Separation
+Clear separation of functions between the two channels:
+- **Channel 1 (system audio)**: analysis of others' speech, meeting context, understanding questions
+- **Channel 2 (microphone)**: private AI requests, answer preparation, internal thoughts
 
-### Преимущества архитектуры
+### Architecture Advantages
 
-1. **Высокая точность**: разделение источников позволяет избежать смешивания голосов
-2. **Конфиденциальность**: возможность задавать личные вопросы ИИ без участия в основной беседе
-3. **Гибкость**: поддержка разных провайдеров для разных каналов
-4. **Производительность**: оптимизированная обработка каждого канала
-5. **Отказоустойчивость**: fallback-механизмы при ошибках конфигурации
+1. **High Accuracy**: separating sources prevents voice mixing
+2. **Privacy**: ability to ask personal AI questions without participating in the main conversation
+3. **Flexibility**: supporting different providers for different channels
+4. **Performance**: optimized processing for each channel
+5. **Fault Tolerance**: fallback mechanisms for configuration errors
 
-Эта двухканальная архитектура делает Natively особенно эффективным инструментом для технических интервью, продаж и других профессиональных ситуаций, где требуется как анализ происходящего, так и подготовка собственных ответов.
-
+This dual-channel architecture makes Natively an especially effective tool for technical interviews, sales, and other professional situations where both analysis of what's happening and preparation of own responses are required.

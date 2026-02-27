@@ -1,45 +1,45 @@
-## 7. Интерфейс и пользовательский опыт
+## 7. User Interface and User Experience
 
-Natively предоставляет продвинутый, ориентированный на производительность интерфейс, разработанный для работы в реальном времени во время встреч, собеседований и презентаций.
+Natively provides an advanced, productivity-focused interface designed for real-time operation during meetings, interviews, and presentations.
 
-### Основные компоненты интерфейса
+### Main Interface Components
 
-#### Главное окно (Main Window)
-Центральный хаб приложения, который содержит:
-- **Панель управления ИИ**: управление режимами работы, моделями и настройками
-- **Очередь скриншотов**: визуальное представление захваченных изображений
-- **Режимы просмотра**: переключение между "очередью" и "решениями"
-- **Контрольные элементы**: кнопки для ручного запуска анализа, очистки очереди и экспорта
+#### Main Window
+The central hub of the application, containing:
+- **AI Control Panel**: operation modes, models, and settings management
+- **Screenshot Queue**: visual representation of captured images
+- **View Modes**: switching between "queue" and "solutions"
+- **Control Elements**: buttons for manual analysis, queue clearing, and export
 
-#### Оверлей (Overlay)
-Полупрозрачное поверх других окон окно, которое обеспечивает:
-- **Всегда сверху**: работает поверх Zoom, Teams, Meet и других приложений
-- **Минималистичный дизайн**: не отвлекает от основной встречи
-- **Быстрый доступ**: мгновенное появление/исчезновение по горячим клавишам
-- **Отображение рекомендаций**: предложенные ответы, объяснения, подсказки
+#### Overlay
+A semi-transparent window that floats above other windows, providing:
+- **Always on Top**: works over Zoom, Teams, Meet, and other applications
+- **Minimalist Design**: doesn't distract from the main meeting
+- **Quick Access**: instant show/hide via hotkeys
+- **Recommendations Display**: suggested answers, explanations, tips
 
-#### Модальные окна
-- **SettingsWindowHelper**: детальные настройки аудио, ИИ, горячих клавиш
-- **ModelSelectorWindowHelper**: выбор активной модели ИИ
-- **LauncherWindow**: быстрый доступ к основным функциям
+#### Modal Windows
+- **SettingsWindowHelper**: detailed audio, AI, hotkey settings
+- **ModelSelectorWindowHelper**: active AI model selection
+- **LauncherWindow**: quick access to main features
 
-### Режимы отображения
+### Display Modes
 
 #### Normal Mode
-Стандартный режим с полным набором функций:
-- Видимое окно в доке/панели задач
-- Полный доступ ко всем функциям
-- Обычное имя процесса и иконка
+Standard mode with full feature set:
+- Visible window in dock/taskbar
+- Full access to all features
+- Normal process name and icon
 
-#### Stealth Mode 2.0 (Режим невидимости)
-Продвинутый режим для ситуаций, когда требуется скрыть использование ассистента:
+#### Stealth Mode 2.0
+Advanced mode for situations requiring hiding assistant usage:
 
 ```typescript
 public setUndetectable(state: boolean): void {
   this.isUndetectable = state;
   this.windowHelper.setContentProtection(state);
   
-  // Применение маскировки
+  // Apply disguise
   if (state && this.disguiseMode !== 'none') {
     this._applyDisguise(this.disguiseMode);
   } else if (!state) {
@@ -48,14 +48,14 @@ public setUndetectable(state: boolean): void {
 }
 ```
 
-**Особенности:**
-- Скрытие из дока (macOS) или панели задач (Windows)
-- Блокировка скриншотов
-- Отключение уведомлений
-- Установка флага `accessory` для macOS
+**Features:**
+- Hiding from dock (macOS) or taskbar (Windows)
+- Screenshot blocking
+- Disabling notifications
+- Setting `accessory` flag for macOS
 
-#### Disguise Mode (Маскировка)
-Система маскировки приложения под системные утилиты:
+#### Disguise Mode
+System for disguising the application as system utilities:
 
 ```typescript
 private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): void {
@@ -69,39 +69,39 @@ private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): voi
   
   process.title = appName;
   app.setName(appName);
-  // ... обновление иконок и заголовков
+  // ... update icons and titles
 }
 ```
 
-**Доступные варианты маскировки:**
-- **Terminal**: маскировка под терминал
-- **System Settings**: маскировка под системные настройки
-- **Activity Monitor**: маскировка под монитор активности
-- **None**: стандартное отображение
+**Available Disguise Options:**
+- **Terminal**: disguise as terminal
+- **System Settings**: disguise as system settings
+- **Activity Monitor**: disguise as activity monitor
+- **None**: standard display
 
-### Управление окнами
+### Window Management
 
-#### Основные методы
+#### Main Methods
 ```typescript
-public createWindow(): void { /* Создание главного окна */ }
-public hideMainWindow(): void { /* Скрытие окна */ }
-public showMainWindow(): void { /* Показ окна */ }
-public toggleMainWindow(): void { /* Переключение видимости */ }
-public centerAndShowWindow(): void { /* Центрирование и показ */ }
+public createWindow(): void { /* Create main window */ }
+public hideMainWindow(): void { /* Hide window */ }
+public showMainWindow(): void { /* Show window */ }
+public toggleMainWindow(): void { /* Toggle visibility */ }
+public centerAndShowWindow(): void { /* Center and show */ }
 ```
 
-#### Размещение окна
-- **moveWindowLeft/right/up/down()**: перемещение окна на одну третью часть экрана
-- **centerAndShowWindow()**: центрирование и показ окна
-- Автоматическое сохранение последнего положения и размера
+#### Window Positioning
+- **moveWindowLeft/right/up/down()**: move window to one-third of screen
+- **centerAndShowWindow()**: center and show window
+- Automatic saving of last position and size
 
-### Горячие клавиши
+### Hotkeys
 
-#### Глобальные сочетания
-Управляются через `KeybindManager` с возможностью полной кастомизации:
+#### Global Combinations
+Managed through `KeybindManager` with full customization support:
 
 ```typescript
-// По умолчанию
+// Default
 {
   "general": {
     "toggle-visibility": "CmdOrCtrl+Shift+Space",
@@ -116,39 +116,39 @@ public centerAndShowWindow(): void { /* Центрирование и показ
 }
 ```
 
-#### Категории горячих клавиш
-1. **Общие (General)**:
-   - Показать/скрыть главное окно
-   - Сделать скриншот
-   - Переместить окно
-   - Переключиться на оверлей
+#### Hotkey Categories
+1. **General**:
+   - Show/hide main window
+   - Take screenshot
+   - Move window
+   - Switch to overlay
 
-2. **AI-функции**:
-   - Запрос к ИИ голосом
-   - Регенерация ответа
-   - Краткий ответ
-   - Подробный ответ
+2. **AI Functions**:
+   - Voice AI request
+   - Answer regeneration
+   - Brief answer
+   - Detailed answer
 
-3. **Встречи**:
-   - Начать запись встречи
-   - Завершить встречу
-   - Добавить заметку
+3. **Meetings**:
+   - Start meeting recording
+   - End meeting
+   - Add note
 
-### Взаимодействие с пользователями
+### User Interactions
 
-#### Система оповещений
-- **Звуковые сигналы**: короткие звуки для различных событий
-- **Визуальные индикаторы**: изменение цвета границы окна
-- **Тост-уведомления**: временные сообщения о статусе
+#### Notification System
+- **Sound Signals**: short sounds for various events
+- **Visual Indicators**: window border color changes
+- **Toast Notifications**: temporary status messages
 
-#### Индикация состояния
-- **Уровень громкости**: визуальный индикатор при тестировании микрофона
-- **Статус подключения**: индикация активности STT и LLM
-- **Прогресс обработки**: анимированные индикаторы при анализе
+#### State Indication
+- **Volume Level**: visual indicator during microphone testing
+- **Connection Status**: STT and LLM activity indication
+- **Processing Progress**: animated indicators during analysis
 
-### Анализ визуального контента
+### Visual Content Analysis
 
-#### Захват скриншотов
+#### Screenshot Capture
 ```typescript
 public async takeScreenshot(
   onBeforeCapture: () => void,
@@ -162,49 +162,49 @@ public async takeScreenshot(
 }
 ```
 
-#### Режимы захвата
-1. **Полноэкранный**: автоматический захват всего экрана
-2. **Выбор области**: пользователь выбирает область вручную
-3. **Автоматический**: по триггерам (например, при обнаружении кода)
+#### Capture Modes
+1. **Full Screen**: automatic capture of entire screen
+2. **Area Selection**: user selects area manually
+3. **Automatic**: by triggers (e.g., when code is detected)
 
-#### Очередь скриншотов
-- Хранение изображений до ручного анализа
-- Визуальное представление в интерфейсе
-- Возможность удаления отдельных элементов
+#### Screenshot Queue
+- Store images for manual analysis
+- Visual representation in interface
+- Ability to delete individual items
 
-### Темы и стиль
+### Themes and Styling
 
-#### Управление темами
-Реализовано через `ThemeManager`:
-- Светлая тема
-- Темная тема
-- Системная (следует настройкам ОС)
+#### Theme Management
+Implemented through `ThemeManager`:
+- Light theme
+- Dark theme
+- System (follows OS settings)
 
-#### Технологии
-- **TailwindCSS**: utility-first подход к стилизации
-- **React**: компонентный интерфейс
-- **Vite**: быстрая сборка и HMR
+#### Technologies
+- **TailwindCSS**: utility-first approach to styling
+- **React**: component-based interface
+- **Vite**: fast build and HMR
 
-### UX-особенности
+### UX Features
 
-#### Минимизация прерываний
-- **Ненавязчивые уведомления**: информация появляется только при необходимости
-- **Режим "не беспокоить"**: отключение уведомлений во время важных моментов
-- **Адаптивный интерфейс**: автоматическое скрытие второстепенных элементов
+#### Minimizing Interruptions
+- **Non-intrusive Notifications**: information appears only when needed
+- **Do Not Disturb Mode**: disabling notifications during important moments
+- **Adaptive Interface**: automatic hiding of secondary elements
 
-#### Производительность
-- **Ленивая загрузка**: окна настроек предзагружаются в фоне
-- **Оптимизированная отрисовка**: минимальное потребление ресурсов GPU
-- **Низкая задержка**: быстрая реакция на действия пользователя
+#### Performance
+- **Lazy Loading**: settings windows preloaded in background
+- **Optimized Rendering**: minimal GPU resource consumption
+- **Low Latency**: quick response to user actions
 
-#### Доступность
-- Поддержка клавиатурной навигации
-- Контрастные цветовые схемы
-- Адаптация под различные размеры экранов
+#### Accessibility
+- Keyboard navigation support
+- High contrast color schemes
+- Adaptation for various screen sizes
 
-### Коммуникация с основным процессом
+### Communication with Main Process
 
-#### IPC-обработчики
+#### IPC Handlers
 ```typescript
 ipcMain.handle('get-ollama-models', async () => {
   try {
@@ -220,13 +220,11 @@ ipcMain.handle('get-ollama-models', async () => {
 });
 ```
 
-#### Основные каналы связи
-- `take-screenshot`: запрос на захват экрана
-- `screenshot-taken`: уведомление о сделанном скриншоте
-- `audio-level`: уровень громкости для визуализации
-- `update-available`: наличие обновления
-- `intelligence-*`: события от ИИ-модуля
+#### Main Communication Channels
+- `take-screenshot`: screen capture request
+- `screenshot-taken`: screenshot taken notification
+- `audio-level`: volume level for visualization
+- `update-available`: update availability
+- `intelligence-*`: events from AI module
 
-Этот комплексный подход к интерфейсу делает Natively мощным инструментом, который одновременно является ненавязчивым и функциональным, обеспечивая баланс между информативностью и минимализмом.
-
-
+This comprehensive approach to interface makes Natively a powerful tool that is simultaneously unobtrusive and functional, providing a balance between informativeness and minimalism.

@@ -1,41 +1,41 @@
-## 10. Разработка и расширение функциональности
+## 10. Development and Functionality Extension
 
-Natively разработан как открытый проект, который легко можно модифицировать, расширять и адаптировать под конкретные нужды. Архитектура приложения позволяет разработчикам вносить изменения на всех уровнях — от пользовательского интерфейса до ядра ИИ.
+Natively is designed as an open project that can be easily modified, extended, and adapted for specific needs. The application architecture allows developers to make changes at all levels — from user interface to AI core.
 
-### Структура проекта для разработки
+### Project Structure for Development
 
-#### Основные директории
+#### Main Directories
 ```
 natively/
-├── main/                  # Основной процесс Electron
-├── services/              # Сервисные компоненты (KeybindManager, CredentialsManager)
-├── audio/                 # Аудио-система (SystemAudioCapture, GoogleSTT, RestSTT)
-├── db/                    # Работа с базой данных (DatabaseManager)
-├── rag/                   # RAG-система (RAGManager)
-├── update/                # Обновления (ReleaseNotesManager)
-├── assets/                # Ассеты (иконки, маскировка)
-└── src/                   # Фронтенд (React/Vite)
+├── main/                  # Electron main process
+├── services/              # Service components (KeybindManager, CredentialsManager)
+├── audio/                 # Audio system (SystemAudioCapture, GoogleSTT, RestSTT)
+├── db/                    # Database operations (DatabaseManager)
+├── rag/                   # RAG system (RAGManager)
+├── update/                # Updates (ReleaseNotesManager)
+├── assets/                # Assets (icons, disguise)
+└── src/                   # Frontend (React/Vite)
     ├── components/
     ├── views/
     └── App.tsx
 ```
 
-### Настройка среды разработки
+### Development Environment Setup
 
-#### Требования
-- **Node.js** (v20+ рекомендуется)
+#### Requirements
+- **Node.js** (v20+ recommended)
 - **Git**
-- **Rust** (для нативного аудиозахвата)
+- **Rust** (for native audio capture)
 
-#### Установка зависимостей
+#### Installing Dependencies
 ```bash
 git clone https://github.com/evinjohnn/natively-cluely-ai-assistant.git
 cd natively-cluely-ai-assistant
 npm install
 ```
 
-#### Переменные окружения
-Создайте файл `.env`:
+#### Environment Variables
+Create a `.env` file:
 ```env
 # Cloud AI
 GEMINI_API_KEY=your_key
@@ -56,22 +56,22 @@ OLLAMA_MODEL=llama3.2
 NODE_ENV=development
 ```
 
-#### Запуск в режиме разработки
+#### Running in Development Mode
 ```bash
 npm start
 ```
 
-#### Сборка дистрибутива
+#### Building Distribution
 ```bash
 npm run dist
 ```
 
-### Расширение функциональности
+### Extending Functionality
 
-#### Добавление нового STT-провайдера
-Для интеграции нового провайдера распознавания речи:
+#### Adding New STT Provider
+To integrate a new speech recognition provider:
 
-1. Создайте новый класс, реализующий интерфейс STT:
+1. Create a new class implementing STT interface:
 ```typescript
 // audio/NewProviderSTT.ts
 export class NewProviderSTT extends EventEmitter {
@@ -80,15 +80,15 @@ export class NewProviderSTT extends EventEmitter {
   }
 
   start(): void {
-    // Логика запуска потоковой транскрипции
+    // Logic for starting streaming transcription
   }
 
   stop(): void {
-    // Остановка
+    // Stop
   }
 
   write(chunk: Buffer): void {
-    // Обработка аудио-чанка
+    // Process audio chunk
   }
 
   private handleTranscript(text: string, isFinal: boolean): void {
@@ -97,7 +97,7 @@ export class NewProviderSTT extends EventEmitter {
 }
 ```
 
-2. Интегрируйте в `setupSystemAudioPipeline()`:
+2. Integrate into `setupSystemAudioPipeline()`:
 ```typescript
 if (sttProvider === 'newprovider') {
   const apiKey = CredentialsManager.getInstance().getNewProviderApiKey();
@@ -107,29 +107,29 @@ if (sttProvider === 'newprovider') {
 }
 ```
 
-#### Добавление нового LLM-провайдера
-Для подключения новой модели ИИ:
+#### Adding New LLM Provider
+To connect a new AI model:
 
-1. Расширьте `LLMHelper`:
+1. Extend `LLMHelper`:
 ```typescript
 // processing/LLMHelper.ts
 async generateResponse(prompt: string, model: string): Promise<string> {
   if (model.startsWith('newprovider/')) {
     return this.callNewProviderApi(prompt, model);
   }
-  // ... остальные провайдеры
+  // ... other providers
 }
 ```
 
-2. Добавьте обработку в IPC:
+2. Add handler in IPC:
 ```typescript
 ipcMain.handle('generate-response', async (event, { prompt, model }) => {
   return await llmHelper.generateResponse(prompt, model);
 });
 ```
 
-#### Новые горячие клавиши
-Добавьте новые сочетания через `KeybindManager`:
+#### New Hotkeys
+Add new combinations via `KeybindManager`:
 
 ```typescript
 // services/KeybindManager.ts
@@ -137,7 +137,7 @@ private defaultKeybinds = {
   "general": {
     "toggle-visibility": "CmdOrCtrl+Shift+Space",
     "take-screenshot": "CmdOrCtrl+H",
-    "custom-action": "CmdOrCtrl+Alt+C" // Новое сочетание
+    "custom-action": "CmdOrCtrl+Alt+C" // New combination
   },
   "ai": {
     "manual-prompt": "CmdOrCtrl+M",
@@ -146,46 +146,46 @@ private defaultKeybinds = {
 }
 ```
 
-### Модификация интерфейса
+### Interface Modification
 
-#### Компонентная структура
-Фронтенд построен на React с использованием Vite:
-- **App.tsx**: корневой компонент
-- **components/**: переиспользуемые UI-компоненты
-- **views/**: страницы и представления
+#### Component Structure
+Frontend is built on React using Vite:
+- **App.tsx**: root component
+- **components/**: reusable UI components
+- **views/**: pages and views
 
-#### Добавление новых представлений
-1. Создайте новый компонент:
+#### Adding New Views
+1. Create new component:
 ```tsx
 // src/views/CustomView.tsx
 const CustomView = () => {
   return (
     <div className="custom-view">
-      <h2>Мое расширение</h2>
-      {/* Кастомный интерфейс */}
+      <h2>My Extension</h2>
+      {/* Custom interface */}
     </div>
   );
 };
 ```
 
-2. Интегрируйте с основным процессом через IPC:
+2. Integrate with main process via IPC:
 ```typescript
-// В основном процессе
+// In main process
 ipcMain.handle('custom-action', async () => {
-  // Логика обработки
+  // Processing logic
   return result;
 });
 ```
 
-### Расширение RAG-системы
+### Extending RAG System
 
-#### Пользовательские эмбеддинги
-Можно добавить поддержку кастомных методов создания эмбеддингов:
+#### Custom Embeddings
+You can add support for custom embedding creation methods:
 
 ```typescript
 // rag/RAGManager.ts
 async createEmbeddings(text: string): Promise<number[]> {
-  // Можно использовать локальные модели или другие провайдеры
+  // Can use local models or other providers
   if (this.useLocalEmbeddings) {
     return this.createLocalEmbedding(text);
   }
@@ -193,10 +193,10 @@ async createEmbeddings(text: string): Promise<number[]> {
 }
 ```
 
-#### Поддержка новых форматов
-Расширьте обработку документов:
+#### New Format Support
+Extend document processing:
 ```typescript
-// Добавьте поддержку PDF, DOCX, презентаций
+// Add support for PDF, DOCX, presentations
 async processDocument(filePath: string): Promise<string> {
   const ext = path.extname(filePath).toLowerCase();
   
@@ -213,84 +213,82 @@ async processDocument(filePath: string): Promise<string> {
 }
 ```
 
-### Тестирование и отладка
+### Testing and Debugging
 
-#### Логирование
-Приложение имеет встроенную систему логирования:
+#### Logging
+The application has a built-in logging system:
 ```typescript
-console.log('Сообщение'); // Будет записано в natively_debug.log
+console.log('Message'); // Will be written to natively_debug.log
 ```
 
-Логи сохраняются в:
+Logs are saved in:
 - macOS: `~/Documents/natively_debug.log`
 - Windows: `%USERPROFILE%\Documents\natively_debug.log`
 - Linux: `~/Documents/natively_debug.log`
 
-#### Отладочные инструменты
-- **Режим разработки**: `NODE_ENV=development`
-- **Встроенный тест аудио**: проверка уровней микрофона
-- **IPC DevTools**: мониторинг сообщений между процессами
+#### Debug Tools
+- **Development Mode**: `NODE_ENV=development`
+- **Built-in Audio Test**: microphone level checking
+- **IPC DevTools**: monitoring messages between processes
 
-### Сборка и распространение
+### Building and Distribution
 
-#### Генерация дистрибутивов
+#### Generating Distributions
 ```bash
-# Сборка для всех платформ
+# Build for all platforms
 npm run dist
 
-# Или для конкретной платформы
+# Or for specific platform
 npm run dist:mac
 npm run dist:win
 npm run dist:linux
 ```
 
-#### Подпись приложений (macOS)
-Для распространения вне App Store:
+#### App Signing (macOS)
+For distribution outside App Store:
 ```bash
-# Необходимо иметь Apple Developer ID
+# Need Apple Developer ID
 electron-builder --mac --sign
 ```
 
-### Вклад в проект
+### Contributing to the Project
 
-#### Принципы внесения изменений
-1. **Fork** репозитория
-2. Создание отдельной ветки: `git checkout -b feature/my-feature`
-3. Коммит изменений
-4. Push в свой fork
-5. Создание Pull Request
+#### Contribution Principles
+1. **Fork** the repository
+2. Create separate branch: `git checkout -b feature/my-feature`
+3. Commit changes
+4. Push to your fork
+5. Create Pull Request
 
-#### Типы вклада
-- **Исправление багов**: особенно в аудио-захвате и STT
-- **Улучшение документации**: README, комментарии в коде
-- **Новые интеграции**: провайдеры ИИ, STT, календари
-- **UI/UX улучшения**: темы, анимации, производительность
-- **Тестирование**: unit-тесты, e2e-тесты
+#### Contribution Types
+- **Bug fixes**: especially in audio capture and STT
+- **Documentation improvements**: README, code comments
+- **New integrations**: AI providers, STT, calendars
+- **UI/UX improvements**: themes, animations, performance
+- **Testing**: unit tests, e2e tests
 
-#### Требования к коду
-- TypeScript с строгой типизацией
-- Чистый, понятный код
-- Комментарии к сложным участкам
-- Соответствие существующей архитектуре
+#### Code Requirements
+- TypeScript with strict typing
+- Clean, understandable code
+- Comments on complex sections
+- Compliance with existing architecture
 
-### Лицензирование
+### Licensing
 
-Проект распространяется под лицензией **GNU Affero General Public License v3.0 (AGPL-3.0)**, что означает:
+The project is distributed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**, which means:
 
-1. **Полная свобода использования**: можно использовать для любых целей
-2. **Обязательное открытие исходного кода**: если вы модифицируете и используете приложение через сеть, должны предоставить исходный код
-3. **Нет ограничений на коммерческое использование**
-4. **Прозрачность**: все изменения видны сообществу
+1. **Complete freedom of use**: can be used for any purpose
+2. **Mandatory source code disclosure**: if you modify and use the application over a network, you must provide source code
+3. **No restrictions on commercial use**
+4. **Transparency**: all changes are visible to community
 
-### Будущее развитие
+### Future Development
 
-#### Возможные направления расширения
-1. **Поддержка мобильных платформ** через Capacitor или React Native
-2. **Интеграция с профессиональными сервисами**: Jira, Notion, Salesforce
-3. **Коллаборативные функции**: безопасный обмен знаниями в команде
-4. **Улучшенный анализ видео**: не только аудио, но и визуальный контекст
-5. **Поддержка многомодальных моделей**: одновременная обработка текста, аудио и видео
+#### Possible Extension Directions
+1. **Mobile platform support** via Capacitor or React Native
+2. **Professional services integration**: Jira, Notion, Salesforce
+3. **Collaborative features**: secure knowledge sharing in teams
+4. **Enhanced video analysis**: not just audio, but also visual context
+5. **Multimodal model support**: simultaneous processing of text, audio, and video
 
-Natively представляет собой мощную основу для создания приватных, локальных ИИ-ассистентов, которые могут быть адаптированы под любые профессиональные сценарии использования.
-
-
+Natively represents a powerful foundation for creating private, local AI assistants that can be adapted for any professional usage scenario.

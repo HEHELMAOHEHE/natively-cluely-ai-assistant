@@ -230,6 +230,32 @@ Update `.github/workflows` (if exists) to use bun:
 | `bun run build` | Build production assets |
 | `bun run app:build` | Build full Electron app |
 | `bun run dist` | Create distributable packages |
+| `bun run setup` | Full setup (install + rebuild + native) |
+| `bun run build:native` | Build Rust native module |
+| `bun run rebuild` | Rebuild native modules for Electron |
+
+#### 7.2 Complete Setup Workflow
+
+```bash
+# Option 1: Full setup (recommended for first install)
+bun run setup
+
+# Option 2: Step by step
+bun install                    # 1. Install dependencies
+bun run postinstall           # 2. Rebuild native modules (better-sqlite3, keytar)
+bun run build:native          # 3. Build Rust native module (requires Rust toolchain)
+```
+
+#### 7.3 Scripts Breakdown
+
+| Script | Purpose |
+|--------|---------|
+| `postinstall` | Runs automatically after `bun install`. Rebuilds native modules for Electron |
+| `build:native` | Builds Rust native audio module (optional, requires Rust) |
+| `setup` | Full setup: install + postinstall + build:native |
+| `rebuild` | Manual rebuild of native modules |
+
+#### 7.4 Troubleshooting
 
 #### 7.2 Troubleshooting
 
@@ -273,13 +299,13 @@ If migration fails:
 After migration, verify:
 
 - [x] `bun install` completes without errors (172 packages installed)
+- [x] `bunx electron-rebuild` works (√ Rebuild Complete)
+- [x] `bun run build:native` works (Rust module compiled in 30s)
 - [ ] `bun run dev` starts Vite dev server
 - [ ] `bun run electron:dev` launches Electron app
 - [ ] `bun run app:dev` works for full development
 - [ ] `bun run build` produces production assets
 - [ ] `bun run app:build` creates Electron distributable
-- [ ] Native modules (better-sqlite3, keytar, sharp) work
-- [ ] Native audio module (Rust) builds correctly
 - [ ] Production `.exe` runs without issues
 
 ## Estimated Changes

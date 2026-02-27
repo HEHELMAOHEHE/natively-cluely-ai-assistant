@@ -17,8 +17,8 @@ This document outlines the migration from npm to bun as the primary package mana
 | Script | Description |
 |--------|-------------|
 | `bun install` | Install dependencies (runs postinstall automatically) |
-| `bun run dev` | Start Vite dev server |
-| `bun run electron:dev` | Run Electron in dev mode |
+| `bun run dev` | Start Vite dev server + Electron (full dev environment) |
+| `bun run electron:dev` | Run Electron in dev mode only |
 | `bun run app:dev` | Full dev workflow |
 | `bun run build` | Build production assets |
 | `bun run app:build` | Build Electron app |

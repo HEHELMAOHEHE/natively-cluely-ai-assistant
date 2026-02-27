@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { LLMHelper } from "../LLMHelper";
 import { UNIVERSAL_WHAT_TO_ANSWER_PROMPT } from "./prompts";
 import { TemporalContext } from "./TemporalContextBuilder";
@@ -58,8 +59,9 @@ ANSWER SHAPE: ${intentResult.answerShape}
             yield* this.llmHelper.streamChat(fullMessage, imagePath, undefined, UNIVERSAL_WHAT_TO_ANSWER_PROMPT);
 
         } catch (error) {
-            console.error("[WhatToAnswerLLM] Stream failed:", error);
+            log.error("[WhatToAnswerLLM] Stream failed:", error);
             yield "Could you repeat that? I want to make sure I address your question properly.";
         }
     }
 }
+

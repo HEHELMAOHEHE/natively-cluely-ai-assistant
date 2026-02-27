@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 // Debug.tsx
 import React, { useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "react-query"
@@ -232,7 +233,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
         const existing = await window.electronAPI.getScreenshots()
         return existing
       } catch (error) {
-        console.error("Error loading extra screenshots:", error)
+        log.error("Error loading extra screenshots:", error)
         return []
       }
     },
@@ -260,10 +261,10 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       if (response.success) {
         refetch()
       } else {
-        console.error("Failed to delete extra screenshot:", response.error)
+        log.error("Failed to delete extra screenshot:", response.error)
       }
     } catch (error) {
-      console.error("Error deleting extra screenshot:", error)
+      log.error("Error deleting extra screenshot:", error)
     }
   }
 
@@ -304,7 +305,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
           "error"
         )
         setIsProcessing(false)
-        console.error("Processing error:", error)
+        log.error("Processing error:", error)
       })
     ]
 

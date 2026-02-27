@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 import { GoogleGenAI } from "@google/genai"
 import Groq from "groq-sdk"
 import OpenAI from "openai"
@@ -66,27 +67,27 @@ export class LLMHelper {
     if (groqApiKey) {
       this.groqApiKey = groqApiKey
       this.groqClient = new Groq({ apiKey: groqApiKey })
-      console.log(`[LLMHelper] Groq client initialized with model: ${GROQ_MODEL}`)
+      log.info(`[LLMHelper] Groq client initialized with model: ${GROQ_MODEL}`)
     }
 
     // Initialize OpenAI client if API key provided
     if (openaiApiKey) {
       this.openaiApiKey = openaiApiKey
       this.openaiClient = new OpenAI({ apiKey: openaiApiKey, dangerouslyAllowBrowser: true })
-      console.log(`[LLMHelper] OpenAI client initialized with model: ${OPENAI_MODEL}`)
+      log.info(`[LLMHelper] OpenAI client initialized with model: ${OPENAI_MODEL}`)
     }
 
     // Initialize Claude client if API key provided
     if (claudeApiKey) {
       this.claudeApiKey = claudeApiKey
       this.claudeClient = new Anthropic({ apiKey: claudeApiKey })
-      console.log(`[LLMHelper] Claude client initialized with model: ${CLAUDE_MODEL}`)
+      log.info(`[LLMHelper] Claude client initialized with model: ${CLAUDE_MODEL}`)
     }
 
     if (useOllama) {
       this.ollamaUrl = ollamaUrl || "http://localhost:11434"
       this.ollamaModel = ollamaModel || "gemma:latest" // Default fallback
-      // console.log(`[LLMHelper] Using Ollama with model: ${this.ollamaModel}`)
+      // log.info(`[LLMHelper] Using Ollama with model: ${this.ollamaModel}`)
 
       // Auto-detect and use first available model if specified model doesn't exist
       this.initializeOllamaModel()
@@ -97,9 +98,9 @@ export class LLMHelper {
         apiKey: apiKey,
         httpOptions: { apiVersion: "v1alpha" }
       })
-      // console.log(`[LLMHelper] Using Google Gemini 3 with model: ${this.geminiModel} (v1alpha API)`)
+      // log.info(`[LLMHelper] Using Google Gemini 3 with model: ${this.geminiModel} (v1alpha API)`)
     } else {
-      console.warn("[LLMHelper] No API key provided. Client will be uninitialized until key is set.")
+      log.warn("[LLMHelper] No API key provided. Client will be uninitialized until key is set.")
     }
   }
 
@@ -109,24 +110,24 @@ export class LLMHelper {
       apiKey: apiKey,
       httpOptions: { apiVersion: "v1alpha" }
     })
-    console.log("[LLMHelper] Gemini API Key updated.");
+    log.info("[LLMHelper] Gemini API Key updated.");
   }
 
   public setGroqApiKey(apiKey: string) {
     this.groqClient = new Groq({ apiKey, dangerouslyAllowBrowser: true });
-    console.log("[LLMHelper] Groq API Key updated.");
+    log.info("[LLMHelper] Groq API Key updated.");
   }
 
   public setOpenaiApiKey(apiKey: string) {
     this.openaiApiKey = apiKey;
     this.openaiClient = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-    console.log("[LLMHelper] OpenAI API Key updated.");
+    log.info("[LLMHelper] OpenAI API Key updated.");
   }
 
   public setClaudeApiKey(apiKey: string) {
     this.claudeApiKey = apiKey;
     this.claudeClient = new Anthropic({ apiKey });
-    console.log("[LLMHelper] Claude API Key updated.");
+    log.info("[LLMHelper] Claude API Key updated.");
   }
 
   /**
@@ -146,12 +147,12 @@ export class LLMHelper {
     if (this.rateLimiters) {
       Object.values(this.rateLimiters).forEach(rl => rl.destroy());
     }
-    console.log('[LLMHelper] Keys scrubbed from memory');
+    log.info('[LLMHelper] Keys scrubbed from memory');
   }
 
   public setGroqFastTextMode(enabled: boolean) {
     this.groqFastTextMode = enabled;
-    console.log(`[LLMHelper] Groq Fast Text Mode: ${enabled}`);
+    log.info(`[LLMHelper] Groq Fast Text Mode: ${enabled}`);
   }
 
   public getGroqFastTextMode(): boolean {
@@ -174,7 +175,7 @@ export class LLMHelper {
       this.ollamaModel = targetModelId.replace('ollama-', '');
       this.customProvider = null;
       this.activeCurlProvider = null;
-      console.log(`[LLMHelper] Switched to Ollama: ${this.ollamaModel}`);
+      log.info(`[LLMHelper] Switched to Ollama: ${this.ollamaModel}`);
       return;
     }
 
@@ -184,7 +185,7 @@ export class LLMHelper {
       this.customProvider = null;
       // Treat text-only custom providers as CurlProviders (responsePath optional)
       this.activeCurlProvider = custom as CurlProvider;
-      console.log(`[LLMHelper] Switched to cURL Provider: ${custom.name}`);
+      log.info(`[LLMHelper] Switched to cURL Provider: ${custom.name}`);
       return;
     }
 
@@ -197,14 +198,14 @@ export class LLMHelper {
     if (targetModelId === GEMINI_PRO_MODEL) this.geminiModel = GEMINI_PRO_MODEL;
     if (targetModelId === GEMINI_FLASH_MODEL) this.geminiModel = GEMINI_FLASH_MODEL;
 
-    console.log(`[LLMHelper] Switched to Cloud Model: ${targetModelId}`);
+    log.info(`[LLMHelper] Switched to Cloud Model: ${targetModelId}`);
   }
 
   public switchToCurl(provider: CurlProvider) {
     this.useOllama = false;
     this.customProvider = null;
     this.activeCurlProvider = provider;
-    console.log(`[LLMHelper] Switched to cURL provider: ${provider.name}`);
+    log.info(`[LLMHelper] Switched to cURL provider: ${provider.name}`);
   }
 
   private cleanJsonResponse(text: string): string {
@@ -240,7 +241,7 @@ export class LLMHelper {
       const data: OllamaResponse = await response.json()
       return data.response
     } catch (error: any) {
-      // console.error("[LLMHelper] Error calling Ollama:", error)
+      // log.error("[LLMHelper] Error calling Ollama:", error)
       throw new Error(`Failed to connect to Ollama: ${error.message}. Make sure Ollama is running on ${this.ollamaUrl}`)
     }
   }
@@ -258,30 +259,30 @@ export class LLMHelper {
     try {
       const availableModels = await this.getOllamaModels()
       if (availableModels.length === 0) {
-        // console.warn("[LLMHelper] No Ollama models found")
+        // log.warn("[LLMHelper] No Ollama models found")
         return
       }
 
       // Check if current model exists, if not use the first available
       if (!availableModels.includes(this.ollamaModel)) {
         this.ollamaModel = availableModels[0]
-        // console.log(`[LLMHelper] Auto-selected first available model: ${this.ollamaModel}`)
+        // log.info(`[LLMHelper] Auto-selected first available model: ${this.ollamaModel}`)
       }
 
       // Test the selected model works
       await this.callOllama("Hello")
-      // console.log(`[LLMHelper] Successfully initialized with model: ${this.ollamaModel}`)
+      // log.info(`[LLMHelper] Successfully initialized with model: ${this.ollamaModel}`)
     } catch (error: any) {
-      // console.error(`[LLMHelper] Failed to initialize Ollama model: ${error.message}`)
+      // log.error(`[LLMHelper] Failed to initialize Ollama model: ${error.message}`)
       // Try to use first available model as fallback
       try {
         const models = await this.getOllamaModels()
         if (models.length > 0) {
           this.ollamaModel = models[0]
-          // console.log(`[LLMHelper] Fallback to: ${this.ollamaModel}`)
+          // log.info(`[LLMHelper] Fallback to: ${this.ollamaModel}`)
         }
       } catch (fallbackError: any) {
-        // console.error(`[LLMHelper] Fallback also failed: ${fallbackError.message}`)
+        // log.error(`[LLMHelper] Fallback also failed: ${fallbackError.message}`)
       }
     }
   }
@@ -295,7 +296,7 @@ export class LLMHelper {
     if (!this.client) throw new Error("Gemini client not initialized")
 
     await this.rateLimiters.gemini.acquire();
-    // console.log(`[LLMHelper] Calling ${GEMINI_FLASH_MODEL}...`)
+    // log.info(`[LLMHelper] Calling ${GEMINI_FLASH_MODEL}...`)
     const response = await this.client.models.generateContent({
       model: GEMINI_FLASH_MODEL,
       contents: contents,
@@ -315,7 +316,7 @@ export class LLMHelper {
     if (!this.client) throw new Error("Gemini client not initialized")
 
     await this.rateLimiters.gemini.acquire();
-    // console.log(`[LLMHelper] Calling ${GEMINI_FLASH_MODEL}...`)
+    // log.info(`[LLMHelper] Calling ${GEMINI_FLASH_MODEL}...`)
     const response = await this.client.models.generateContent({
       model: GEMINI_FLASH_MODEL,
       contents: contents,
@@ -366,7 +367,7 @@ export class LLMHelper {
         // Only retry on 503 or overload errors
         if (!e.message?.includes("503") && !e.message?.includes("overloaded")) throw e;
 
-        console.warn(`[LLMHelper] 503 Overload. Retrying in ${delay}ms...`);
+        log.warn(`[LLMHelper] 503 Overload. Retrying in ${delay}ms...`);
         await new Promise(r => setTimeout(r, delay));
         delay *= 2;
       }
@@ -380,7 +381,7 @@ export class LLMHelper {
   private async generateContent(contents: any[]): Promise<string> {
     if (!this.client) throw new Error("Gemini client not initialized")
 
-    console.log(`[LLMHelper] Calling ${this.geminiModel}...`)
+    log.info(`[LLMHelper] Calling ${this.geminiModel}...`)
 
     return this.withRetry(async () => {
       // @ts-ignore
@@ -394,18 +395,18 @@ export class LLMHelper {
       });
 
       // Debug: log full response structure
-      // console.log(`[LLMHelper] Full response:`, JSON.stringify(response, null, 2).substring(0, 500))
+      // log.info(`[LLMHelper] Full response:`, JSON.stringify(response, null, 2).substring(0, 500))
 
       const candidate = response.candidates?.[0];
       if (!candidate) {
-        console.error("[LLMHelper] No candidates returned!");
-        console.error("[LLMHelper] Full response:", JSON.stringify(response, null, 2).substring(0, 1000));
+        log.error("[LLMHelper] No candidates returned!");
+        log.error("[LLMHelper] Full response:", JSON.stringify(response, null, 2).substring(0, 1000));
         return "";
       }
 
       if (candidate.finishReason && candidate.finishReason !== "STOP") {
-        console.warn(`[LLMHelper] Generation stopped with reason: ${candidate.finishReason}`);
-        console.warn(`[LLMHelper] Safety ratings:`, JSON.stringify(candidate.safetyRatings));
+        log.warn(`[LLMHelper] Generation stopped with reason: ${candidate.finishReason}`);
+        log.warn(`[LLMHelper] Safety ratings:`, JSON.stringify(candidate.safetyRatings));
       }
 
       // Try multiple ways to access text - handle different response structures
@@ -430,8 +431,8 @@ export class LLMHelper {
       }
 
       if (!text || text.trim().length === 0) {
-        console.error("[LLMHelper] Candidate found but text is empty.");
-        console.error("[LLMHelper] Response structure:", JSON.stringify({
+        log.error("[LLMHelper] Candidate found but text is empty.");
+        log.error("[LLMHelper] Response structure:", JSON.stringify({
           hasResponseText: !!response.text,
           candidateFinishReason: candidate.finishReason,
           candidateContent: candidate.content,
@@ -445,7 +446,7 @@ export class LLMHelper {
         return "";
       }
 
-      console.log(`[LLMHelper] Extracted text length: ${text.length}`);
+      log.info(`[LLMHelper] Extracted text length: ${text.length}`);
       return text;
     });
   }
@@ -478,7 +479,7 @@ export class LLMHelper {
       const text = await this.generateWithFlash(parts)
       return JSON.parse(this.cleanJsonResponse(text))
     } catch (error) {
-      // console.error("Error extracting problem from images:", error)
+      // log.error("Error extracting problem from images:", error)
       throw error
     }
   }
@@ -494,16 +495,16 @@ export class LLMHelper {
   }
 }\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
 
-    // console.log("[LLMHelper] Calling Gemini LLM for solution...");
+    // log.info("[LLMHelper] Calling Gemini LLM for solution...");
     try {
       // Use Flash as default (Pro is experimental)
       const text = await this.generateWithFlash([{ text: prompt }])
-      // console.log("[LLMHelper] Gemini LLM returned result.");
+      // log.info("[LLMHelper] Gemini LLM returned result.");
       const parsed = JSON.parse(this.cleanJsonResponse(text))
-      // console.log("[LLMHelper] Parsed LLM response:", parsed)
+      // log.info("[LLMHelper] Parsed LLM response:", parsed)
       return parsed
     } catch (error) {
-      // console.error("[LLMHelper] Error in generateSolution:", error);
+      // log.error("[LLMHelper] Error in generateSolution:", error);
       throw error;
     }
   }
@@ -537,10 +538,10 @@ export class LLMHelper {
       // Use Flash for multimodal (images)
       const text = await this.generateWithFlash(parts)
       const parsed = JSON.parse(this.cleanJsonResponse(text))
-      // console.log("[LLMHelper] Parsed debug LLM response:", parsed)
+      // log.info("[LLMHelper] Parsed debug LLM response:", parsed)
       return parsed
     } catch (error) {
-      // console.error("Error debugging solution with images:", error)
+      // log.error("Error debugging solution with images:", error)
       throw error
     }
   }
@@ -573,7 +574,7 @@ export class LLMHelper {
         data: processedBuffer.toString("base64")
       };
     } catch (error) {
-      console.error("[LLMHelper] Failed to process image with sharp:", error);
+      log.error("[LLMHelper] Failed to process image with sharp:", error);
       // Fallback to raw read if sharp fails
       const data = await fs.promises.readFile(path);
       return {
@@ -611,7 +612,7 @@ export class LLMHelper {
       return { text: text, timestamp: Date.now() };
 
     } catch (error: any) {
-      console.error("Error analyzing image file:", error);
+      log.error("Error analyzing image file:", error);
       return {
         text: `I couldn't analyze the screen right now (${error.message}). Please try again.`,
         timestamp: Date.now()
@@ -659,7 +660,7 @@ ANSWER DIRECTLY:`;
         throw new Error("No LLM provider configured");
       }
     } catch (error) {
-      //   console.error("[LLMHelper] Error generating suggestion:", error);
+      //   log.error("[LLMHelper] Error generating suggestion:", error);
       // Silence error
       throw error;
     }
@@ -667,7 +668,7 @@ ANSWER DIRECTLY:`;
 
   public async chatWithGemini(message: string, imagePath?: string, context?: string, skipSystemPrompt: boolean = false, alternateGroqMessage?: string): Promise<string> {
     try {
-      console.log(`[LLMHelper] chatWithGemini called with message:`, message.substring(0, 50))
+      log.info(`[LLMHelper] chatWithGemini called with message:`, message.substring(0, 50))
 
       const isMultimodal = !!imagePath;
 
@@ -695,11 +696,11 @@ ANSWER DIRECTLY:`;
 
       // GROQ FAST TEXT OVERRIDE (Text-Only)
       if (this.groqFastTextMode && !isMultimodal && this.groqClient) {
-        console.log(`[LLMHelper] ⚡️ Groq Fast Text Mode Active. Routing to Groq...`);
+        log.info(`[LLMHelper] ⚡️ Groq Fast Text Mode Active. Routing to Groq...`);
         try {
           return await this.generateWithGroq(combinedMessages.groq);
         } catch (e: any) {
-          console.warn("[LLMHelper] Groq Fast Text failed, falling back to standard routing:", e.message);
+          log.warn("[LLMHelper] Groq Fast Text failed, falling back to standard routing:", e.message);
           // Fall through to standard routing
         }
       }
@@ -717,7 +718,7 @@ ANSWER DIRECTLY:`;
       }
 
       if (this.customProvider) {
-        console.log(`[LLMHelper] Using Custom Provider: ${this.customProvider.name}`);
+        log.info(`[LLMHelper] Using Custom Provider: ${this.customProvider.name}`);
         // For non-streaming call — use rich CUSTOM prompts since custom providers can be cloud models
         const response = await this.executeCustomProvider(
           this.customProvider.curlCommand,
@@ -824,31 +825,31 @@ ANSWER DIRECTLY:`;
       for (let rotation = 0; rotation < MAX_FULL_ROTATIONS; rotation++) {
         if (rotation > 0) {
           const backoffMs = 1000 * rotation;
-          console.log(`[LLMHelper] 🔄 Non-streaming rotation ${rotation + 1}/${MAX_FULL_ROTATIONS} after ${backoffMs}ms backoff...`);
+          log.info(`[LLMHelper] 🔄 Non-streaming rotation ${rotation + 1}/${MAX_FULL_ROTATIONS} after ${backoffMs}ms backoff...`);
           await this.delay(backoffMs);
         }
 
         for (const provider of providers) {
           try {
-            console.log(`[LLMHelper] ${rotation === 0 ? '🚀' : '🔁'} Attempting ${provider.name}...`);
+            log.info(`[LLMHelper] ${rotation === 0 ? '🚀' : '🔁'} Attempting ${provider.name}...`);
             const rawResponse = await provider.execute();
             if (rawResponse && rawResponse.trim().length > 0) {
-              console.log(`[LLMHelper] ✅ ${provider.name} succeeded`);
+              log.info(`[LLMHelper] ✅ ${provider.name} succeeded`);
               return this.processResponse(rawResponse);
             }
-            console.warn(`[LLMHelper] ⚠️ ${provider.name} returned empty response`);
+            log.warn(`[LLMHelper] ⚠️ ${provider.name} returned empty response`);
           } catch (error: any) {
-            console.warn(`[LLMHelper] ⚠️ ${provider.name} failed: ${error.message}`);
+            log.warn(`[LLMHelper] ⚠️ ${provider.name} failed: ${error.message}`);
           }
         }
       }
 
       // All exhausted
-      console.error("[LLMHelper] ❌ All non-streaming providers exhausted");
+      log.error("[LLMHelper] ❌ All non-streaming providers exhausted");
       return "I apologize, but I couldn't generate a response. Please try again.";
 
     } catch (error: any) {
-      console.error("[LLMHelper] Critical Error in chatWithGemini:", error);
+      log.error("[LLMHelper] Critical Error in chatWithGemini:", error);
 
       if (error.message.includes("503") || error.message.includes("overloaded")) {
         return "The AI service is currently overloaded. Please try again in a moment.";
@@ -957,7 +958,7 @@ ANSWER DIRECTLY:`;
       return JSON.stringify(answer); // Fallback if they pointed to an object
 
     } catch (error: any) {
-      console.error("[LLMHelper] cURL Execution Error:", error.message);
+      log.error("[LLMHelper] cURL Execution Error:", error.message);
       return `Error: ${error.message}`;
     }
   }
@@ -1018,7 +1019,7 @@ ANSWER DIRECTLY:`;
         const imageData = await fs.promises.readFile(imagePath);
         base64Image = imageData.toString("base64");
       } catch (e) {
-        console.warn("Failed to read image for Custom Provider:", e);
+        log.warn("Failed to read image for Custom Provider:", e);
       }
     }
 
@@ -1046,7 +1047,7 @@ ANSWER DIRECTLY:`;
       });
 
       const data = await response.json();
-      console.log(`[LLMHelper] Custom Provider raw response:`, JSON.stringify(data).substring(0, 1000));
+      log.info(`[LLMHelper] Custom Provider raw response:`, JSON.stringify(data).substring(0, 1000));
 
       if (!response.ok) {
         throw new Error(`Custom Provider HTTP ${response.status}: ${JSON.stringify(data).substring(0, 200)}`);
@@ -1054,10 +1055,10 @@ ANSWER DIRECTLY:`;
 
       // 6. Extract Answer - try common response formats
       const extracted = this.extractFromCommonFormats(data);
-      console.log(`[LLMHelper] Custom Provider extracted text length: ${extracted.length}`);
+      log.info(`[LLMHelper] Custom Provider extracted text length: ${extracted.length}`);
       return extracted;
     } catch (error) {
-      console.error("Custom Provider Error:", error);
+      log.error("Custom Provider Error:", error);
       throw error;
     }
   }
@@ -1091,7 +1092,7 @@ ANSWER DIRECTLY:`;
     if (typeof data.result === 'string') return data.result;
 
     // Fallback: stringify the whole response
-    console.warn("[LLMHelper] Could not extract text from custom provider response, returning raw JSON");
+    log.warn("[LLMHelper] Could not extract text from custom provider response, returning raw JSON");
     return JSON.stringify(data);
   }
 
@@ -1162,7 +1163,7 @@ ANSWER DIRECTLY:`;
    * MULTIMODAL: Gemini-only (existing logic)
    */
   public async * streamChatWithGemini(message: string, imagePath?: string, context?: string, skipSystemPrompt: boolean = false): AsyncGenerator<string, void, unknown> {
-    console.log(`[LLMHelper] streamChatWithGemini called with message:`, message.substring(0, 50));
+    log.info(`[LLMHelper] streamChatWithGemini called with message:`, message.substring(0, 50));
 
     const isMultimodal = !!imagePath;
 
@@ -1253,26 +1254,26 @@ ANSWER DIRECTLY:`;
     for (let rotation = 0; rotation < MAX_FULL_ROTATIONS; rotation++) {
       if (rotation > 0) {
         const backoffMs = 1000 * rotation;
-        console.log(`[LLMHelper] 🔄 Starting rotation ${rotation + 1}/${MAX_FULL_ROTATIONS} after ${backoffMs}ms backoff...`);
+        log.info(`[LLMHelper] 🔄 Starting rotation ${rotation + 1}/${MAX_FULL_ROTATIONS} after ${backoffMs}ms backoff...`);
         await this.delay(backoffMs);
       }
 
       for (let i = 0; i < providers.length; i++) {
         const provider = providers[i];
         try {
-          console.log(`[LLMHelper] ${rotation === 0 ? '🚀' : '🔁'} Attempting ${provider.name}...`);
+          log.info(`[LLMHelper] ${rotation === 0 ? '🚀' : '🔁'} Attempting ${provider.name}...`);
           yield* provider.execute();
-          console.log(`[LLMHelper] ✅ ${provider.name} stream completed successfully`);
+          log.info(`[LLMHelper] ✅ ${provider.name} stream completed successfully`);
           return; // SUCCESS — exit immediately
         } catch (err: any) {
-          console.warn(`[LLMHelper] ⚠️ ${provider.name} failed: ${err.message}`);
+          log.warn(`[LLMHelper] ⚠️ ${provider.name} failed: ${err.message}`);
           // Continue to next provider
         }
       }
     }
 
     // Truly exhausted after all rotations
-    console.error(`[LLMHelper] ❌ All providers exhausted after ${MAX_FULL_ROTATIONS} rotations`);
+    log.error(`[LLMHelper] ❌ All providers exhausted after ${MAX_FULL_ROTATIONS} rotations`);
     yield "All AI services are currently unavailable. Please check your API keys and try again.";
   }
 
@@ -1300,14 +1301,14 @@ ANSWER DIRECTLY:`;
 
     // GROQ FAST TEXT OVERRIDE (Text-Only)
     if (this.groqFastTextMode && !isMultimodal && this.groqClient) {
-      console.log(`[LLMHelper] ⚡️ Groq Fast Text Mode Active (Streaming). Routing to Groq...`);
+      log.info(`[LLMHelper] ⚡️ Groq Fast Text Mode Active (Streaming). Routing to Groq...`);
       try {
         const groqSystem = systemPromptOverride || GROQ_SYSTEM_PROMPT;
         const groqFullMessage = `${groqSystem}\n\n${userContent}`;
         yield* this.streamWithGroq(groqFullMessage);
         return;
       } catch (e: any) {
-        console.warn("[LLMHelper] Groq Fast Text streaming failed, falling back:", e.message);
+        log.warn("[LLMHelper] Groq Fast Text streaming failed, falling back:", e.message);
         // Fall through
       }
     }
@@ -1632,7 +1633,7 @@ ANSWER DIRECTLY:`;
         }
       }
     } catch (e) {
-      console.error("Ollama streaming failed", e);
+      log.error("Ollama streaming failed", e);
       yield "Error: Failed to stream from Ollama.";
     }
   }
@@ -1684,7 +1685,7 @@ ANSWER DIRECTLY:`;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Custom Provider HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+        log.error(`Custom Provider HTTP ${response.status}: ${errorText.substring(0, 200)}`);
         yield `Error: Custom Provider returned HTTP ${response.status}`;
         return;
       }
@@ -1726,7 +1727,7 @@ ANSWER DIRECTLY:`;
       }
 
     } catch (e) {
-      console.error("Custom streaming failed", e);
+      log.error("Custom streaming failed", e);
       yield "Error streaming from custom provider.";
     }
   }
@@ -1777,21 +1778,21 @@ ANSWER DIRECTLY:`;
       const data = await response.json();
       return data.models?.map((model: any) => model.name) || [];
     } catch (error) {
-      console.warn("[LLMHelper] Error fetching Ollama models:", error);
+      log.warn("[LLMHelper] Error fetching Ollama models:", error);
       return [];
     }
   }
 
   public async forceRestartOllama(): Promise<boolean> {
     try {
-      console.log("[LLMHelper] Attempting to force restart Ollama...");
+      log.info("[LLMHelper] Attempting to force restart Ollama...");
 
       // 1. Check for process on port 11434
       try {
         const { stdout } = await execAsync(`lsof -t -i:11434`);
         const pid = stdout.trim();
         if (pid) {
-          console.log(`[LLMHelper] Found blocking PID: ${pid}. Killing...`);
+          log.info(`[LLMHelper] Found blocking PID: ${pid}. Killing...`);
           await execAsync(`kill -9 ${pid}`);
         }
       } catch (e: any) {
@@ -1800,7 +1801,7 @@ ANSWER DIRECTLY:`;
       }
 
       // 2. Start Ollama serve
-      console.log("[LLMHelper] Starting ollama serve...");
+      log.info("[LLMHelper] Starting ollama serve...");
       // We use exec but don't await the result endlessly as it's a server
       const child = exec('ollama serve');
       child.unref(); // Detach
@@ -1810,7 +1811,7 @@ ANSWER DIRECTLY:`;
 
       return true;
     } catch (error) {
-      console.error("[LLMHelper] Failed to restart Ollama:", error);
+      log.error("[LLMHelper] Failed to restart Ollama:", error);
       return false;
     }
   }
@@ -1823,12 +1824,12 @@ ANSWER DIRECTLY:`;
       // 1. Fast Check
       const isRunning = await this.checkOllamaAvailable();
       if (isRunning) {
-        console.log("[LLMHelper] Ollama is already running. Connecting immediately.");
+        log.info("[LLMHelper] Ollama is already running. Connecting immediately.");
         return { success: true, message: "already-running" };
       }
 
       // 2. Not running - Start it
-      console.log("[LLMHelper] Ollama not detected. Starting 'ollama serve'...");
+      log.info("[LLMHelper] Ollama not detected. Starting 'ollama serve'...");
       const child = exec('ollama serve');
       child.unref(); // Detach process so it persists
 
@@ -1837,16 +1838,16 @@ ANSWER DIRECTLY:`;
         await this.delay(500); // 500ms * 10 = 5s
         const available = await this.checkOllamaAvailable();
         if (available) {
-          console.log("[LLMHelper] Ollama started successfully.");
+          log.info("[LLMHelper] Ollama started successfully.");
           return { success: true, message: "started" };
         }
       }
 
-      console.warn("[LLMHelper] Ollama started but did not respond within 5s.");
+      log.warn("[LLMHelper] Ollama started but did not respond within 5s.");
       return { success: false, message: "timeout" };
 
     } catch (error: any) {
-      console.error("[LLMHelper] Failed to ensure Ollama running:", error);
+      log.error("[LLMHelper] Failed to ensure Ollama running:", error);
       return { success: false, message: error.message };
     }
   }
@@ -1932,7 +1933,7 @@ ANSWER DIRECTLY:`;
     // Try Groq first if available
     if (this.groqClient) {
       try {
-        console.log(`[LLMHelper] 🚀 Mode-specific Groq stream starting...`);
+        log.info(`[LLMHelper] 🚀 Mode-specific Groq stream starting...`);
         const stream = await this.groqClient.chat.completions.create({
           model: GROQ_MODEL,
           messages: [{ role: "user", content: groqMessage }],
@@ -1947,16 +1948,16 @@ ANSWER DIRECTLY:`;
             yield content;
           }
         }
-        console.log(`[LLMHelper] ✅ Mode-specific Groq stream completed`);
+        log.info(`[LLMHelper] ✅ Mode-specific Groq stream completed`);
         return; // Success - done
       } catch (err: any) {
-        console.warn(`[LLMHelper] ⚠️ Groq mode-specific failed: ${err.message}, falling back to Gemini`);
+        log.warn(`[LLMHelper] ⚠️ Groq mode-specific failed: ${err.message}, falling back to Gemini`);
       }
     }
 
     // Fallback to Gemini
     if (this.client) {
-      console.log(`[LLMHelper] 🔄 Falling back to Gemini for mode-specific request...`);
+      log.info(`[LLMHelper] 🔄 Falling back to Gemini for mode-specific request...`);
       yield* this.streamWithGeminiModel(geminiMessage, GEMINI_FLASH_MODEL);
     } else {
       throw new Error("No LLM provider available");
@@ -2024,12 +2025,12 @@ ANSWER DIRECTLY:`;
         model: originalModel
       });
       if (isValidResponse(response)) return response;
-      console.warn(`[LLMHelper] Initial ${originalModel} call returned empty/invalid response.`);
+      log.warn(`[LLMHelper] Initial ${originalModel} call returned empty/invalid response.`);
     } catch (error: any) {
-      console.warn(`[LLMHelper] Initial ${originalModel} call failed: ${error.message}`);
+      log.warn(`[LLMHelper] Initial ${originalModel} call failed: ${error.message}`);
     }
 
-    console.log(`[LLMHelper] 🚀 Triggering Speculative Parallel Retry (Flash + Pro)...`);
+    log.info(`[LLMHelper] 🚀 Triggering Speculative Parallel Retry (Flash + Pro)...`);
 
     // 2. Parallel Execution (Retry Flash vs Pro)
     // We create promises for both but treat them carefully
@@ -2061,19 +2062,19 @@ ANSWER DIRECTLY:`;
 
       // We use Promise.any to get the first *successful* result
       const winner = await Promise.any([flashRetryPromise, proBackupPromise]);
-      console.log(`[LLMHelper] Parallel race won by: ${winner.type}`);
+      log.info(`[LLMHelper] Parallel race won by: ${winner.type}`);
       return winner.res;
 
     } catch (aggregateError) {
-      console.warn(`[LLMHelper] Both parallel retry attempts failed.`);
+      log.warn(`[LLMHelper] Both parallel retry attempts failed.`);
     }
 
     // 4. Last Resort: Flash Final Retry
-    console.log(`[LLMHelper] ⚠️ All parallel attempts failed. Trying Flash one last time...`);
+    log.info(`[LLMHelper] ⚠️ All parallel attempts failed. Trying Flash one last time...`);
     try {
       return await client.models.generateContent({ ...args, model: originalModel });
     } catch (finalError) {
-      console.error(`[LLMHelper] Final retry failed.`);
+      log.error(`[LLMHelper] Final retry failed.`);
       throw finalError;
     }
   }
@@ -2101,17 +2102,17 @@ ANSWER DIRECTLY:`;
    * 3. Gemini Pro (Retry 5x)
    */
   public async generateMeetingSummary(systemPrompt: string, context: string, groqSystemPrompt?: string): Promise<string> {
-    console.log(`[LLMHelper] generateMeetingSummary called. Context length: ${context.length}`);
+    log.info(`[LLMHelper] generateMeetingSummary called. Context length: ${context.length}`);
 
     // Helper: Estimate tokens (crude approximation: 4 chars = 1 token)
     const estimateTokens = (text: string) => Math.ceil(text.length / 4);
     const tokenCount = estimateTokens(context);
-    console.log(`[LLMHelper] Estimated tokens: ${tokenCount}`);
+    log.info(`[LLMHelper] Estimated tokens: ${tokenCount}`);
 
     // ATTEMPT 1: Groq (if text-only and within limits)
     // Groq Llama 3.3 70b has ~128k context, let's be safe with 100k
     if (this.groqClient && tokenCount < 100000) {
-      console.log(`[LLMHelper] Attempting Groq for summary...`);
+      log.info(`[LLMHelper] Attempting Groq for summary...`);
       try {
         const groqPrompt = groqSystemPrompt || systemPrompt;
         // Use non-streaming for summary
@@ -2132,20 +2133,20 @@ ANSWER DIRECTLY:`;
 
         const text = response.choices[0]?.message?.content || "";
         if (text.trim().length > 0) {
-          console.log(`[LLMHelper] ✅ Groq summary generated successfully.`);
+          log.info(`[LLMHelper] ✅ Groq summary generated successfully.`);
           return this.processResponse(text);
         }
       } catch (e: any) {
-        console.warn(`[LLMHelper] ⚠️ Groq summary failed: ${e.message}. Falling back to Gemini...`);
+        log.warn(`[LLMHelper] ⚠️ Groq summary failed: ${e.message}. Falling back to Gemini...`);
       }
     } else {
       if (tokenCount >= 100000) {
-        console.log(`[LLMHelper] Context too large for Groq (${tokenCount} tokens). Skipping straight to Gemini.`);
+        log.info(`[LLMHelper] Context too large for Groq (${tokenCount} tokens). Skipping straight to Gemini.`);
       }
     }
 
     // ATTEMPT 2: Gemini Flash (with 2 retries = 3 attempts total)
-    console.log(`[LLMHelper] Attempting Gemini Flash for summary...`);
+    log.info(`[LLMHelper] Attempting Gemini Flash for summary...`);
     const contents = [{ text: `${systemPrompt}\n\nCONTEXT:\n${context}` }];
 
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -2156,11 +2157,11 @@ ANSWER DIRECTLY:`;
           `Gemini Flash Summary (Attempt ${attempt})`
         );
         if (text.trim().length > 0) {
-          console.log(`[LLMHelper] ✅ Gemini Flash summary generated successfully (Attempt ${attempt}).`);
+          log.info(`[LLMHelper] ✅ Gemini Flash summary generated successfully (Attempt ${attempt}).`);
           return this.processResponse(text);
         }
       } catch (e: any) {
-        console.warn(`[LLMHelper] ⚠️ Gemini Flash attempt ${attempt}/3 failed: ${e.message}`);
+        log.warn(`[LLMHelper] ⚠️ Gemini Flash attempt ${attempt}/3 failed: ${e.message}`);
         if (attempt < 3) {
           await new Promise(r => setTimeout(r, 1000 * attempt)); // Linear backoff
         }
@@ -2171,14 +2172,14 @@ ANSWER DIRECTLY:`;
     // User requested "call gemini 3 pro until summary is generated"
     // We will cap it at 5 heavily backed-off retries to avoid hanging processes forever,
     // but effectively this acts as a very persistent retry.
-    console.log(`[LLMHelper] ⚠️ Flash exhausted. Switching to Gemini Pro for robust retry...`);
+    log.info(`[LLMHelper] ⚠️ Flash exhausted. Switching to Gemini Pro for robust retry...`);
     const maxProRetries = 5;
 
     if (!this.client) throw new Error("Gemini client not initialized");
 
     for (let attempt = 1; attempt <= maxProRetries; attempt++) {
       try {
-        console.log(`[LLMHelper] 🔄 Gemini Pro Attempt ${attempt}/${maxProRetries}...`);
+        log.info(`[LLMHelper] 🔄 Gemini Pro Attempt ${attempt}/${maxProRetries}...`);
         const response = await this.withTimeout(
           // @ts-ignore
           this.client.models.generateContent({
@@ -2195,14 +2196,14 @@ ANSWER DIRECTLY:`;
         const text = response.text || "";
 
         if (text.trim().length > 0) {
-          console.log(`[LLMHelper] ✅ Gemini Pro summary generated successfully.`);
+          log.info(`[LLMHelper] ✅ Gemini Pro summary generated successfully.`);
           return this.processResponse(text);
         }
       } catch (e: any) {
-        console.warn(`[LLMHelper] ⚠️ Gemini Pro attempt ${attempt} failed: ${e.message}`);
+        log.warn(`[LLMHelper] ⚠️ Gemini Pro attempt ${attempt} failed: ${e.message}`);
         // Aggressive backoff for Pro: 2s, 4s, 8s, 16s, 32s
         const backoff = 2000 * Math.pow(2, attempt - 1);
-        console.log(`[LLMHelper] Waiting ${backoff}ms before next retry...`);
+        log.info(`[LLMHelper] Waiting ${backoff}ms before next retry...`);
         await new Promise(r => setTimeout(r, backoff));
       }
     }
@@ -2221,7 +2222,7 @@ ANSWER DIRECTLY:`;
       await this.initializeOllamaModel();
     }
 
-    // console.log(`[LLMHelper] Switched to Ollama: ${this.ollamaModel} at ${this.ollamaUrl}`);
+    // log.info(`[LLMHelper] Switched to Ollama: ${this.ollamaModel} at ${this.ollamaUrl}`);
   }
 
   public async switchToGemini(apiKey?: string, modelId?: string): Promise<void> {
@@ -2241,7 +2242,7 @@ ANSWER DIRECTLY:`;
 
     this.useOllama = false;
     this.customProvider = null;
-    // console.log(`[LLMHelper] Switched to Gemini: ${this.geminiModel}`);
+    // log.info(`[LLMHelper] Switched to Gemini: ${this.geminiModel}`);
   }
 
   public async switchToCustom(provider: CustomProvider): Promise<void> {
@@ -2251,7 +2252,7 @@ ANSWER DIRECTLY:`;
     this.groqClient = null;
     this.openaiClient = null;
     this.claudeClient = null;
-    console.log(`[LLMHelper] Switched to Custom Provider: ${provider.name}`);
+    log.info(`[LLMHelper] Switched to Custom Provider: ${provider.name}`);
   }
 
   public async testConnection(): Promise<{ success: boolean; error?: string }> {

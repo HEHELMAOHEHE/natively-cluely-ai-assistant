@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef } from "react"
 import { useQuery } from "react-query"
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
@@ -50,7 +51,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
         const existing = await window.electronAPI.getScreenshots()
         return existing
       } catch (error) {
-        console.error("Error loading screenshots:", error)
+        log.error("Error loading screenshots:", error)
         showToast("Error", "Failed to load existing screenshots", "error")
         return []
       }
@@ -83,11 +84,11 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
       if (response.success) {
         refetch()
       } else {
-        console.error("Failed to delete screenshot:", response.error)
+        log.error("Failed to delete screenshot:", response.error)
         showToast("Error", "Failed to delete the screenshot file", "error")
       }
     } catch (error) {
-      console.error("Error deleting screenshot:", error)
+      log.error("Error deleting screenshot:", error)
     }
   }
 
@@ -171,7 +172,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
           window.electronAPI.invoke('set-model', result.model).catch(() => { });
         }
       } catch (error) {
-        console.error('Error loading default model:', error);
+        log.error('Error loading default model:', error);
       }
     };
     loadDefaultModel();
@@ -219,7 +220,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
           "error"
         )
         setView("queue")
-        console.error("Processing error:", error)
+        log.error("Processing error:", error)
       }),
       window.electronAPI.onProcessingNoScreenshots(() => {
         showToast(
@@ -280,7 +281,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
 
   const handleModelChange = (modelId: string) => {
     setCurrentModel(modelId)
-    window.electronAPI.invoke('set-model', modelId).catch(console.error);
+    window.electronAPI.invoke('set-model', modelId).catch(log.error);
     setChatMessages((msgs) => [...msgs, {
       role: "gemini",
       text: `🔄 Switched to ${modelId}. Ready for your questions!`

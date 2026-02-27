@@ -170,3 +170,4 @@ native-module/target/
 native-module/*.node
 
 
+.kilocodemodes

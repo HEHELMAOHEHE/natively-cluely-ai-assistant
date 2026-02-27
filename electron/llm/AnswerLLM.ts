@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { LLMHelper } from "../LLMHelper";
 import { UNIVERSAL_ANSWER_PROMPT } from "./prompts";
 
@@ -24,8 +25,9 @@ export class AnswerLLM {
             return fullResponse.trim();
 
         } catch (error) {
-            console.error("[AnswerLLM] Generation failed:", error);
+            log.error("[AnswerLLM] Generation failed:", error);
             return "";
         }
     }
 }
+

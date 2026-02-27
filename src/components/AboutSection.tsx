@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useEffect, useRef } from 'react';
 import {
     Github, Twitter, Shield, Cpu, Database,
@@ -21,11 +22,11 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
             if (donationClickTimeRef.current) {
                 const elapsed = Date.now() - donationClickTimeRef.current;
                 if (elapsed > 20000) { // 20 seconds
-                    console.log("User returned after >20s. Marking as donated.");
+                    log.info("User returned after >20s. Marking as donated.");
                     await window.electronAPI?.setDonationComplete();
                     donationClickTimeRef.current = null; // Reset
                 } else {
-                    console.log("User returned too quickly (<20s). Not confirming donation.");
+                    log.info("User returned too quickly (<20s). Not confirming donation.");
                     donationClickTimeRef.current = null;
                 }
             }

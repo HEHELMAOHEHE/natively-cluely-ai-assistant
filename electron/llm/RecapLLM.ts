@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { LLMHelper } from "../LLMHelper";
 import { UNIVERSAL_RECAP_PROMPT } from "./prompts";
 
@@ -19,7 +20,7 @@ export class RecapLLM {
             for await (const chunk of stream) fullResponse += chunk;
             return this.clampRecapResponse(fullResponse);
         } catch (error) {
-            console.error("[RecapLLM] Generation failed:", error);
+            log.error("[RecapLLM] Generation failed:", error);
             return "";
         }
     }
@@ -33,7 +34,7 @@ export class RecapLLM {
             // Use our universal helper
             yield* this.llmHelper.streamChat(context, undefined, undefined, UNIVERSAL_RECAP_PROMPT);
         } catch (error) {
-            console.error("[RecapLLM] Streaming generation failed:", error);
+            log.error("[RecapLLM] Streaming generation failed:", error);
         }
     }
 
@@ -43,3 +44,4 @@ export class RecapLLM {
         return text.split('\n').filter(l => l.trim()).slice(0, 5).join('\n');
     }
 }
+

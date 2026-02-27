@@ -11,7 +11,20 @@
     "baseUrl": ".",
     "outDir": "../dist-electron",
     "moduleResolution": "node",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@electron/*": ["./*"],
+      "@llm/*": ["llm/*"],
+      "@services/*": ["services/*"],
+      "@utils/logger": ["utils/logger"],
+      "@utils/*": ["utils/*"],
+      "@rag/*": ["rag/*"],
+      "@audio/*": ["audio/*"],
+      "@db/*": ["db/*"],
+      "@update/*": ["update/*"],
+      "@config/*": ["config/*"]
+    }
   },
   "include": [
     "**/*.ts"

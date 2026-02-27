@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Check, Bell, Sparkles, Heart, Rocket } from 'lucide-react';
@@ -104,9 +105,9 @@ export const FeatureSpotlight: React.FC = () => {
 
         // Interaction triggers "Anonymous one-time ping"
         if (!isInterested) {
-            console.log(`[FeatureSpotlight] User registered interest in: ${currentFeature.id}`);
+            log.info(`[FeatureSpotlight] User registered interest in: ${currentFeature.id}`);
         } else {
-            console.log(`[FeatureSpotlight] User removed interest in: ${currentFeature.id}`);
+            log.info(`[FeatureSpotlight] User removed interest in: ${currentFeature.id}`);
         }
     };
 

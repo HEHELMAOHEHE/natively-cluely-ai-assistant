@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 import { BrowserWindow, screen } from "electron"
 import { WindowHelper } from "./WindowHelper"
 import path from "node:path"
@@ -95,6 +96,10 @@ export class SettingsWindowHelper {
 
         // Ensure fully visible on screen
         this.ensureVisibleOnScreen();
+        // Apply content protection BEFORE showing window
+        if (this.contentProtection && this.settingsWindow) {
+            this.settingsWindow.setContentProtection(true);
+        }
         this.settingsWindow.show()
         this.settingsWindow.focus()
         this.emitVisibilityChange(true);
@@ -157,7 +162,7 @@ export class SettingsWindowHelper {
             this.settingsWindow.setAlwaysOnTop(true, "floating")
         }
 
-        console.log(`[SettingsWindowHelper] Creating Settings Window with Content Protection: ${this.contentProtection}`);
+        log.info(`[SettingsWindowHelper] Creating Settings Window with Content Protection: ${this.contentProtection}`);
         this.settingsWindow.setContentProtection(this.contentProtection);
 
         // Load with query param
@@ -169,6 +174,10 @@ export class SettingsWindowHelper {
 
         this.settingsWindow.once('ready-to-show', () => {
             if (showWhenReady) {
+                // Apply content protection BEFORE showing window
+                if (this.contentProtection && this.settingsWindow) {
+                    this.settingsWindow.setContentProtection(true);
+                }
                 this.settingsWindow?.show()
             }
         })
@@ -210,7 +219,7 @@ export class SettingsWindowHelper {
     private contentProtection: boolean = false; // Track state
 
     public setContentProtection(enable: boolean): void {
-        console.log(`[SettingsWindowHelper] Setting content protection to: ${enable}`);
+        log.info(`[SettingsWindowHelper] Setting content protection to: ${enable}`);
         this.contentProtection = enable;
 
         if (this.settingsWindow && !this.settingsWindow.isDestroyed()) {
@@ -218,3 +227,4 @@ export class SettingsWindowHelper {
         }
     }
 }
+

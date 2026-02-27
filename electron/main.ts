@@ -85,78 +85,78 @@ export class AppState {
   } as const
 
   constructor() {
-    console.log('[AppState] Constructor called - Instance ID:', this.constructor.name);
+    log.info('[AppState] Constructor called - Instance ID:', this.constructor.name);
     
     // Initialize WindowHelper with this
     this.windowHelper = new WindowHelper(this)
-    console.log('[AppState] WindowHelper initialized');
+    log.info('[AppState] WindowHelper initialized');
     
     this.settingsWindowHelper = new SettingsWindowHelper()
-    console.log('[AppState] SettingsWindowHelper initialized');
+    log.info('[AppState] SettingsWindowHelper initialized');
     
     this.modelSelectorWindowHelper = new ModelSelectorWindowHelper()
-    console.log('[AppState] ModelSelectorWindowHelper initialized');
+    log.info('[AppState] ModelSelectorWindowHelper initialized');
 
     // Initialize ScreenshotHelper
     this.screenshotHelper = new ScreenshotHelper(this.view)
-    console.log('[AppState] ScreenshotHelper initialized');
+    log.info('[AppState] ScreenshotHelper initialized');
 
     // Initialize ProcessingHelper
     this.processingHelper = new ProcessingHelper(this)
-    console.log('[AppState] ProcessingHelper initialized');
+    log.info('[AppState] ProcessingHelper initialized');
 
     // Initialize KeybindManager
     const keybindManager = KeybindManager.getInstance();
-    console.log('[AppState] KeybindManager instance retrieved');
+    log.info('[AppState] KeybindManager instance retrieved');
     keybindManager.setWindowHelper(this.windowHelper);
     keybindManager.setupIpcHandlers();
     keybindManager.onUpdate(() => {
       this.updateTrayMenu();
     });
-    console.log('[AppState] KeybindManager setup complete');
+    log.info('[AppState] KeybindManager setup complete');
 
     // Inject WindowHelper into other helpers
     this.settingsWindowHelper.setWindowHelper(this.windowHelper);
-    console.log('[AppState] SettingsWindowHelper WindowHelper injected');
+    log.info('[AppState] SettingsWindowHelper WindowHelper injected');
     this.modelSelectorWindowHelper.setWindowHelper(this.windowHelper);
-    console.log('[AppState] ModelSelectorWindowHelper WindowHelper injected');
+    log.info('[AppState] ModelSelectorWindowHelper WindowHelper injected');
 
     // Initialize IntelligenceManager with LLMHelper
     this.intelligenceManager = new IntelligenceManager(this.processingHelper.getLLMHelper())
-    console.log('[AppState] IntelligenceManager initialized');
+    log.info('[AppState] IntelligenceManager initialized');
 
     // Initialize ThemeManager
     this.themeManager = ThemeManager.getInstance()
-    console.log('[AppState] ThemeManager instance retrieved');
+    log.info('[AppState] ThemeManager instance retrieved');
 
     // Initialize RAGManager
     this.initializeRAGManager()
-    console.log('[AppState] RAGManager initialization complete');
+    log.info('[AppState] RAGManager initialization complete');
 
     this.setupIntelligenceEvents()
-    console.log('[AppState] Intelligence events setup complete');
+    log.info('[AppState] Intelligence events setup complete');
     this.setupOllamaIpcHandlers()
-    console.log('[AppState] Ollama IPC handlers setup complete');
+    log.info('[AppState] Ollama IPC handlers setup complete');
     
     // Initialize Auto-Updater
     this.setupAutoUpdater()
-    console.log('[AppState] Auto-Updater setup complete');
+    log.info('[AppState] Auto-Updater setup complete');
     
     // Set content protection to true on startup
-    console.log('[AppState] Setting content protection to true');
+    log.info('[AppState] Setting content protection to true');
     this.setUndetectable(true);
-    console.log('[AppState] Content protection set to:', this.isUndetectable);
+    log.info('[AppState] Content protection set to:', this.isUndetectable);
     
     // Set disguise mode to terminal on startup
-    console.log('[AppState] Setting disguise mode to terminal');
+    log.info('[AppState] Setting disguise mode to terminal');
     this.setDisguise('terminal');
-    console.log('[AppState] Disguise mode set to:', this.disguiseMode);
+    log.info('[AppState] Disguise mode set to:', this.disguiseMode);
     
     // Log startup messages
-    console.log('[WindowHelper] Content Protection set to: true');
-    console.log('[SettingsWindowHelper] Setting content protection to: true');
-    console.log('[AppState] Applying disguise: terminal (Terminal )');
-    console.log('[AppState] Constructor completed successfully');
+    log.info('[WindowHelper] Content Protection set to: true');
+    log.info('[SettingsWindowHelper] Setting content protection to: true');
+    log.info('[AppState] Applying disguise: terminal (Terminal )');
+    log.info('[AppState] Constructor completed successfully');
   }
 
   private broadcast(channel: string, ...args: any[]): void {
@@ -177,10 +177,10 @@ export class AppState {
         const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         this.ragManager = new RAGManager({ db: sqliteDb, apiKey });
         this.ragManager.setLLMHelper(this.processingHelper.getLLMHelper());
-        console.log('[AppState] RAGManager initialized');
+        log.info('[AppState] RAGManager initialized');
       }
     } catch (error) {
-      console.error('[AppState] Failed to initialize RAGManager:', error);
+      log.error('[AppState] Failed to initialize RAGManager:', error);
     }
   }
 
@@ -189,12 +189,12 @@ export class AppState {
     autoUpdater.autoInstallOnAppQuit = false
 
     autoUpdater.on("checking-for-update", () => {
-      console.log("[AutoUpdater] Checking for update...")
+      log.info("[AutoUpdater] Checking for update...")
       this.broadcast("update-checking")
     })
 
     autoUpdater.on("update-available", async (info) => {
-      console.log("[AutoUpdater] Update available:", info.version)
+      log.info("[AutoUpdater] Update available:", info.version)
       this.updateAvailable = true
 
       const releaseManager = ReleaseNotesManager.getInstance();
@@ -207,12 +207,12 @@ export class AppState {
     })
 
     autoUpdater.on("update-not-available", (info) => {
-      console.log("[AutoUpdater] Update not available:", info.version)
+      log.info("[AutoUpdater] Update not available:", info.version)
       this.broadcast("update-not-available", info)
     })
 
     autoUpdater.on("error", (err) => {
-      console.error("[AutoUpdater] Error:", err)
+      log.error("[AutoUpdater] Error:", err)
       this.broadcast("update-error", err.message)
     })
 
@@ -220,23 +220,23 @@ export class AppState {
       let log_message = "Download speed: " + progressObj.bytesPerSecond
       log_message = log_message + " - Downloaded " + progressObj.percent + "%"
       log_message = log_message + " (" + progressObj.transferred + "/" + progressObj.total + ")"
-      console.log("[AutoUpdater] " + log_message)
+      log.info("[AutoUpdater] " + log_message)
       this.broadcast("download-progress", progressObj)
     })
 
     autoUpdater.on("update-downloaded", (info) => {
-      console.log("[AutoUpdater] Update downloaded:", info.version)
+      log.info("[AutoUpdater] Update downloaded:", info.version)
       this.broadcast("update-downloaded", info)
     })
 
     // Delayed check
     setTimeout(() => {
       if (process.env.NODE_ENV === "development") {
-        console.log("[AutoUpdater] Development mode: Running manual update check...");
+        log.info("[AutoUpdater] Development mode: Running manual update check...");
         this.checkForUpdatesManual();
       } else {
         autoUpdater.checkForUpdatesAndNotify().catch(err => {
-          console.error("[AutoUpdater] Failed to check for updates:", err);
+          log.error("[AutoUpdater] Failed to check for updates:", err);
         });
       }
     }, 10000);
@@ -244,7 +244,7 @@ export class AppState {
 
   private async checkForUpdatesManual(): Promise<void> {
     try {
-      console.log('[AutoUpdater] Checking for updates manually via GitHub API...');
+      log.info('[AutoUpdater] Checking for updates manually via GitHub API...');
       const releaseManager = ReleaseNotesManager.getInstance();
       const notes = await releaseManager.fetchReleaseNotes('latest');
 
@@ -253,10 +253,10 @@ export class AppState {
         const latestVersionTag = notes.version;
         const latestVersion = latestVersionTag.replace(/^v/, '');
 
-        console.log(`[AutoUpdater] Manual Check: Current=${currentVersion}, Latest=${latestVersion}`);
+        log.info(`[AutoUpdater] Manual Check: Current=${currentVersion}, Latest=${latestVersion}`);
 
         if (this.isVersionNewer(currentVersion, latestVersion)) {
-          console.log('[AutoUpdater] Manual Check: New version found!');
+          log.info('[AutoUpdater] Manual Check: New version found!');
           this.updateAvailable = true;
 
           const info = {
@@ -273,12 +273,12 @@ export class AppState {
             parsedNotes: notes
           });
         } else {
-          console.log('[AutoUpdater] Manual Check: App is up to date.');
+          log.info('[AutoUpdater] Manual Check: App is up to date.');
           this.broadcast("update-not-available", { version: currentVersion });
         }
       }
     } catch (err) {
-      console.error('[AutoUpdater] Manual update check failed:', err);
+      log.error('[AutoUpdater] Manual update check failed:', err);
     }
   }
 
@@ -296,22 +296,22 @@ export class AppState {
   }
 
   public async quitAndInstallUpdate(): Promise<void> {
-    console.log('[AutoUpdater] quitAndInstall called - applying update...')
+    log.info('[AutoUpdater] quitAndInstall called - applying update...')
 
     if (process.platform === 'darwin') {
       try {
         const updateFile = (autoUpdater as any).downloadedUpdateHelper?.file
-        console.log('[AutoUpdater] Downloaded update file:', updateFile)
+        log.info('[AutoUpdater] Downloaded update file:', updateFile)
 
         if (updateFile) {
           const updateDir = path.dirname(updateFile)
           await shell.openPath(updateDir)
-          console.log('[AutoUpdater] Opened update directory:', updateDir)
+          log.info('[AutoUpdater] Opened update directory:', updateDir)
           setTimeout(() => app.quit(), 1000)
           return
         }
       } catch (err) {
-        console.error('[AutoUpdater] Failed to open update directory:', err)
+        log.error('[AutoUpdater] Failed to open update directory:', err)
       }
     }
 
@@ -319,7 +319,7 @@ export class AppState {
       try {
         autoUpdater.quitAndInstall(false, true)
       } catch (err) {
-        console.error('[AutoUpdater] quitAndInstall failed:', err)
+        log.error('[AutoUpdater] quitAndInstall failed:', err)
         app.exit(0)
       }
     })
@@ -341,12 +341,12 @@ export class AppState {
    */
   private setupSystemAudioPipeline(): void {
     if (this.audioPipelineInitialized) {
-      console.log('[Main] Audio pipeline already initialized. Skipping creation.');
+      log.info('[Main] Audio pipeline already initialized. Skipping creation.');
       return;
     }
 
     try {
-      console.log('[Main] Initializing Audio Pipeline...');
+      log.info('[Main] Initializing Audio Pipeline...');
 
       // 1. Create Captures
       this.systemAudioCapture = new SystemAudioCapture();
@@ -357,7 +357,7 @@ export class AppState {
       this.googleSTT_User = this.createSTTInstance('user');
 
       if (!this.googleSTT || !this.googleSTT_User) {
-        console.error('[Main] STT engines are not configured. Skipping audio pipeline startup.');
+        log.error('[Main] STT engines are not configured. Skipping audio pipeline startup.');
         this.destroyAudioPipeline();
         return;
       }
@@ -367,14 +367,14 @@ export class AppState {
         if (this.isMeetingActive) this.googleSTT?.write(chunk);
       });
       this.systemAudioCapture.on('error', (err: Error) => {
-        console.error('[Main] SystemAudioCapture Error:', err);
+        log.error('[Main] SystemAudioCapture Error:', err);
       });
 
       this.microphoneCapture.on('data', (chunk: Buffer) => {
         if (this.isMeetingActive) this.googleSTT_User?.write(chunk);
       });
       this.microphoneCapture.on('error', (err: Error) => {
-        console.error('[Main] MicrophoneCapture Error:', err);
+        log.error('[Main] MicrophoneCapture Error:', err);
       });
 
       // 4. Wire Events: STT -> Logic
@@ -385,10 +385,10 @@ export class AppState {
       this.syncAudioRates();
 
       this.audioPipelineInitialized = true;
-      console.log('[Main] Audio Pipeline Initialized Successfully');
+      log.info('[Main] Audio Pipeline Initialized Successfully');
 
     } catch (err) {
-      console.error('[Main] Failed to setup System Audio Pipeline:', err);
+      log.error('[Main] Failed to setup System Audio Pipeline:', err);
       // Attempt cleanup if failed midway
       this.destroyAudioPipeline();
     }
@@ -402,10 +402,10 @@ export class AppState {
     if (sttProvider === 'deepgram') {
       const apiKey = cm?.getDeepgramApiKey?.();
       if (apiKey) {
-        console.log(`[Main] Using DeepgramStreamingSTT for ${speaker}`);
+        log.info(`[Main] Using DeepgramStreamingSTT for ${speaker}`);
         instance = new DeepgramStreamingSTT(apiKey);
       } else {
-        console.warn(`[Main] Deepgram key is missing for ${speaker}.`);
+        log.warn(`[Main] Deepgram key is missing for ${speaker}.`);
       }
     } else if (sttProvider === 'groq' || sttProvider === 'openai' || sttProvider === 'elevenlabs' || sttProvider === 'azure' || sttProvider === 'ibmwatson') {
       // Handle various REST providers
@@ -429,10 +429,10 @@ export class AppState {
       }
 
       if (apiKey) {
-        console.log(`[Main] Using RestSTT (${sttProvider}) for ${speaker}`);
+        log.info(`[Main] Using RestSTT (${sttProvider}) for ${speaker}`);
         instance = new RestSTT(sttProvider, apiKey, modelOverride, region);
       } else {
-        console.warn(`[Main] ${sttProvider} key is missing for ${speaker}.`);
+        log.warn(`[Main] ${sttProvider} key is missing for ${speaker}.`);
       }
     }
 
@@ -443,15 +443,15 @@ export class AppState {
       const hasGoogleCreds = Boolean(googleCredsFromManager || googleCredsFromEnv);
 
       if (!hasGoogleCreds && sttProvider === 'google') {
-        console.warn(`[Main] Google STT selected for ${speaker}, but no Google credentials are configured.`);
+        log.warn(`[Main] Google STT selected for ${speaker}, but no Google credentials are configured.`);
         return null;
       }
 
       if (hasGoogleCreds) {
-        console.log(`[Main] Falling back to GoogleSTT for ${speaker}`);
+        log.info(`[Main] Falling back to GoogleSTT for ${speaker}`);
         instance = new GoogleSTT();
       } else {
-        console.warn(`[Main] No valid STT credentials found for ${speaker}.`);
+        log.warn(`[Main] No valid STT credentials found for ${speaker}.`);
       }
     }
     return instance;
@@ -481,7 +481,7 @@ export class AppState {
     });
 
     sttInstance.on('error', (err: Error) => {
-      console.error(`[Main] STT (${speaker}) Error:`, err);
+      log.error(`[Main] STT (${speaker}) Error:`, err);
     });
   }
 
@@ -523,11 +523,11 @@ export class AppState {
       this.googleSTT_User = null;
     }
     this.audioPipelineInitialized = false;
-    console.log('[Main] Audio Pipeline Destroyed.');
+    log.info('[Main] Audio Pipeline Destroyed.');
   }
 
   private async reconfigureAudio(inputDeviceId?: string, outputDeviceId?: string): Promise<void> {
-    console.log(`[Main] Reconfiguring Audio: Input=${inputDeviceId}, Output=${outputDeviceId}`);
+    log.info(`[Main] Reconfiguring Audio: Input=${inputDeviceId}, Output=${outputDeviceId}`);
 
     // 1. System Audio
     if (this.systemAudioCapture) {
@@ -544,10 +544,10 @@ export class AppState {
         if (this.isMeetingActive) this.googleSTT?.write(chunk);
       });
       this.systemAudioCapture.on('error', (err: Error) => {
-        console.error('[Main] SystemAudioCapture Error:', err);
+        log.error('[Main] SystemAudioCapture Error:', err);
       });
     } catch (err) {
-      console.warn('[Main] Failed to reconfigure SystemAudioCapture, trying default.', err);
+      log.warn('[Main] Failed to reconfigure SystemAudioCapture, trying default.', err);
       this.systemAudioCapture = new SystemAudioCapture(); // Fallback
       // re-wire
       this.systemAudioCapture.on('data', (chunk) => this.googleSTT?.write(chunk));
@@ -568,10 +568,10 @@ export class AppState {
         if (this.isMeetingActive) this.googleSTT_User?.write(chunk);
       });
       this.microphoneCapture.on('error', (err: Error) => {
-        console.error('[Main] MicrophoneCapture Error:', err);
+        log.error('[Main] MicrophoneCapture Error:', err);
       });
     } catch (err) {
-      console.warn('[Main] Failed to reconfigure MicrophoneCapture, trying default.', err);
+      log.warn('[Main] Failed to reconfigure MicrophoneCapture, trying default.', err);
       this.microphoneCapture = new MicrophoneCapture(); // Fallback
       this.microphoneCapture.on('data', (chunk) => this.googleSTT_User?.write(chunk));
     }
@@ -581,7 +581,7 @@ export class AppState {
    * Reconfigure STT provider mid-session
    */
   public async reconfigureSttProvider(): Promise<void> {
-    console.log('[Main] Reconfiguring STT Provider...');
+    log.info('[Main] Reconfiguring STT Provider...');
 
     // Stop and destroy existing STT instances
     if (this.googleSTT) {
@@ -609,11 +609,11 @@ export class AppState {
       this.googleSTT?.start();
       this.googleSTT_User?.start();
     }
-    console.log('[Main] STT Provider reconfigured');
+    log.info('[Main] STT Provider reconfigured');
   }
 
   public startAudioTest(deviceId?: string): void {
-    console.log(`[Main] Starting Audio Test on device: ${deviceId || 'default'}`);
+    log.info(`[Main] Starting Audio Test on device: ${deviceId || 'default'}`);
     this.stopAudioTest();
 
     try {
@@ -643,24 +643,24 @@ export class AppState {
       });
 
       this.audioTestCapture.on('error', (err: Error) => {
-        console.error('[Main] AudioTest Error:', err);
+        log.error('[Main] AudioTest Error:', err);
       });
 
     } catch (err) {
-      console.error('[Main] Failed to start audio test:', err);
+      log.error('[Main] Failed to start audio test:', err);
     }
   }
 
   public stopAudioTest(): void {
     if (this.audioTestCapture) {
-      console.log('[Main] Stopping Audio Test');
+      log.info('[Main] Stopping Audio Test');
       this.audioTestCapture.stop();
       this.audioTestCapture = null;
     }
   }
 
   public async startMeeting(metadata?: any): Promise<void> {
-    console.log('[Main] Starting Meeting...', metadata);
+    log.info('[Main] Starting Meeting...', metadata);
 
     this.isMeetingActive = true;
     if (metadata) {
@@ -690,7 +690,7 @@ export class AppState {
   }
 
   public async endMeeting(): Promise<void> {
-    console.log('[Main] Ending Meeting...');
+    log.info('[Main] Ending Meeting...');
     this.isMeetingActive = false;
 
     this.systemAudioCapture?.stop();
@@ -709,7 +709,7 @@ export class AppState {
       const legacyProviders = cm.getCustomProviders();
       const all = [...(curlProviders || []), ...(legacyProviders || [])];
 
-      console.log(`[Main] Reverting model to default: ${defaultModel}`);
+      log.info(`[Main] Reverting model to default: ${defaultModel}`);
       this.processingHelper.getLLMHelper().setModel(defaultModel, all);
 
       BrowserWindow.getAllWindows().forEach(win => {
@@ -717,7 +717,7 @@ export class AppState {
       });
 
     } catch (e) {
-      console.error("[Main] Failed to revert model:", e);
+      log.error("[Main] Failed to revert model:", e);
     }
 
     await this.processCompletedMeetingForRAG();
@@ -748,10 +748,10 @@ export class AppState {
       }
 
       const result = await this.ragManager.processMeeting(meeting.id, segments, summary);
-      console.log(`[AppState] RAG processed meeting ${meeting.id}: ${result.chunkCount} chunks`);
+      log.info(`[AppState] RAG processed meeting ${meeting.id}: ${result.chunkCount} chunks`);
 
     } catch (error) {
-      console.error('[AppState] Failed to process meeting for RAG:', error);
+      log.error('[AppState] Failed to process meeting for RAG:', error);
     }
   }
 
@@ -842,7 +842,7 @@ export class AppState {
     })
 
     this.intelligenceManager.on('error', (error: Error, mode: string) => {
-      console.error(`[IntelligenceManager] Error in ${mode}:`, error)
+      log.error(`[IntelligenceManager] Error in ${mode}:`, error)
       const win = mainWindow()
       if (win) {
         win.webContents.send('intelligence-error', { error: error.message, mode })
@@ -851,7 +851,7 @@ export class AppState {
   }
 
   public updateGoogleCredentials(keyPath: string): void {
-    console.log(`[AppState] Updating Google Credentials to: ${keyPath}`);
+    log.info(`[AppState] Updating Google Credentials to: ${keyPath}`);
     process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 
     this.googleSTT?.setCredentials(keyPath);
@@ -859,18 +859,18 @@ export class AppState {
   }
 
   public setRecognitionLanguage(key: string): void {
-    console.log(`[AppState] Setting recognition language to: ${key}`);
+    log.info(`[AppState] Setting recognition language to: ${key}`);
     this.googleSTT?.setRecognitionLanguage(key);
     this.googleSTT_User?.setRecognitionLanguage(key);
   }
 
   public static getInstance(): AppState {
-    console.log('[AppState] getInstance() called');
+    log.info('[AppState] getInstance() called');
     if (!AppState.instance) {
-      console.log('[AppState] Creating new AppState instance');
+      log.info('[AppState] Creating new AppState instance');
       AppState.instance = new AppState()
     } else {
-      console.log('[AppState] Returning existing AppState instance');
+      log.info('[AppState] Returning existing AppState instance');
     }
     return AppState.instance
   }
@@ -964,7 +964,7 @@ export class AppState {
   }
 
   public toggleMainWindow(): void {
-    console.log(
+    log.info(
       "Screenshots: ",
       this.screenshotHelper.getScreenshotQueue().length,
       "Extra screenshots: ",
@@ -1074,7 +1074,7 @@ export class AppState {
         }
       }
     } catch (e) {
-      console.error('[Tray] Error checking for icon:', e);
+      log.error('[Tray] Error checking for icon:', e);
     }
 
     const trayIcon = nativeImage.createFromPath(iconToUse).resize({ width: 16, height: 16 });
@@ -1139,7 +1139,7 @@ export class AppState {
               })
             }
           } catch (error) {
-            console.error("Error taking screenshot from tray:", error)
+            log.error("Error taking screenshot from tray:", error)
           }
         }
       },
@@ -1174,22 +1174,23 @@ export class AppState {
   }
 
   public setUndetectable(state: boolean, fromIPC: boolean = false): void {
-    console.log('[AppState] setUndetectable called with state:', state, '(current:', this.isUndetectable, ')', fromIPC ? '(from IPC)' : '(from internal)');
+    log.info('[AppState] setUndetectable called with state:', state, '(current:', this.isUndetectable, ')', fromIPC ? '(from IPC)' : '(from internal)');
     
     // Guard: Don't process if state hasn't changed
     if (this.isUndetectable === state) {
-      console.log('[AppState] setUndetectable: State unchanged, skipping');
+      log.info('[AppState] setUndetectable: State unchanged, skipping');
       return;
     }
     
     this.isUndetectable = state
     
     // Always log the content protection change
-    console.log(`[WindowHelper] Content Protection set to: ${state}`);
-    console.log(`[SettingsWindowHelper] Setting content protection to: ${state}`);
+    log.info(`[WindowHelper] Content Protection set to: ${state}`);
+    log.info(`[SettingsWindowHelper] Setting content protection to: ${state}`);
     
     this.windowHelper.setContentProtection(state)
     this.settingsWindowHelper.setContentProtection(state)
+    this.modelSelectorWindowHelper.setContentProtection(state)
 
     if (state && this.disguiseMode !== 'none') {
       this._applyDisguise(this.disguiseMode);
@@ -1215,13 +1216,13 @@ export class AppState {
         settingsWin.webContents.send('undetectable-changed', state);
       }
     } else {
-      console.log('[AppState] setUndetectable: Skipping renderer notification (internal change)');
+      log.info('[AppState] setUndetectable: Skipping renderer notification (internal change)');
     }
 
-    if (process.platform === 'darwin') {
+    if (process.platform === 'darwin' || process.platform === 'win32') {
       this.applyVisibilityMode(state ? 'stealth' : 'normal');
     }
-    console.log('[AppState] setUndetectable completed');
+    log.info('[AppState] setUndetectable completed');
   }
 
   public getUndetectable(): boolean {
@@ -1229,7 +1230,7 @@ export class AppState {
   }
 
   public setDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): void {
-    console.log('[AppState] setDisguise called with mode:', mode);
+    log.info('[AppState] setDisguise called with mode:', mode);
     this.disguiseMode = mode;
     if (this.isUndetectable) {
       this._applyDisguise(mode);
@@ -1267,7 +1268,7 @@ export class AppState {
         break;
     }
 
-    console.log(`[AppState] Applying disguise: ${mode} (${appName})`);
+    log.info(`[AppState] Applying disguise: ${mode} (${appName})`);
 
     process.title = appName;
     app.setName(appName);
@@ -1330,26 +1331,40 @@ export class AppState {
   }
 
   private applyVisibilityMode(mode: 'normal' | 'stealth') {
-    if (process.platform !== 'darwin') return;
-
-    if (mode === 'stealth') {
-      app.setActivationPolicy('accessory');
-      setTimeout(() => {
+    if (process.platform === 'darwin') {
+      if (mode === 'stealth') {
+        app.setActivationPolicy('accessory');
+        setTimeout(() => {
+          const win = this.getMainWindow();
+          if (win && !win.isDestroyed()) {
+            app.focus({ steal: true });
+            win.focus();
+          }
+        }, 10);
+        this.hideTray();
+      } else {
+        app.setActivationPolicy('regular');
         const win = this.getMainWindow();
         if (win && !win.isDestroyed()) {
-          app.focus({ steal: true });
+          win.show();
           win.focus();
         }
-      }, 10);
-      this.hideTray();
-    } else {
-      app.setActivationPolicy('regular');
-      const win = this.getMainWindow();
-      if (win && !win.isDestroyed()) {
-        win.show();
-        win.focus();
+        this.showTray();
       }
-      this.showTray();
+    } else if (process.platform === 'win32') {
+      // Windows: Hide/show taskbar icon using setSkipTaskbar
+      const win = this.windowHelper.getLauncherWindow();
+      if (win && !win.isDestroyed()) {
+        if (mode === 'stealth') {
+          log.info('[AppState] applyVisibilityMode: Hiding from Windows taskbar');
+          win.setSkipTaskbar(true);
+          this.hideTray();
+        } else {
+          log.info('[AppState] applyVisibilityMode: Showing in Windows taskbar');
+          win.setSkipTaskbar(false);
+          this.showTray();
+        }
+      }
     }
 
     this.visibilityMode = mode;
@@ -1363,7 +1378,7 @@ function setMacDockIcon() {
 
   const appState = AppState.getInstance();
   if (appState && appState.getUndetectable()) {
-    console.log("[DockIcon] Skipping dock icon setup due to stealth mode");
+    log.info("[DockIcon] Skipping dock icon setup due to stealth mode");
     return;
   }
 
@@ -1371,7 +1386,7 @@ function setMacDockIcon() {
     ? path.join(process.resourcesPath, "natively.icns")
     : path.resolve(__dirname, "../assets/natively.icns");
 
-  console.log("[DockIcon] Using:", iconPath);
+  log.info("[DockIcon] Using:", iconPath);
   app.dock.setIcon(nativeImage.createFromPath(iconPath));
 }
 
@@ -1389,7 +1404,7 @@ async function initializeApp() {
 
   const storedServiceAccountPath = CredentialsManager.getInstance().getGoogleServiceAccountPath();
   if (storedServiceAccountPath) {
-    console.log("[Init] Loading stored Google Service Account path");
+    log.info("[Init] Loading stored Google Service Account path");
     appState.updateGoogleCredentials(storedServiceAccountPath);
   }
 
@@ -1413,10 +1428,10 @@ async function initializeApp() {
   try {
     setMacDockIcon();
   } catch (e) {
-    console.error("Failed to set dock icon:", e);
+    log.error("Failed to set dock icon:", e);
   }
 
-  console.log("App is ready")
+  log.info("App is ready")
 
   // 7. Create Window
   appState.createWindow()
@@ -1427,6 +1442,17 @@ async function initializeApp() {
       app.setActivationPolicy('accessory');
     } else {
       app.setActivationPolicy('regular');
+      appState.showTray();
+    }
+  } else if (process.platform === 'win32') {
+    // Windows: Apply taskbar visibility based on stealth mode
+    if (appState.getUndetectable()) {
+      const win = appState.getMainWindow();
+      if (win && !win.isDestroyed()) {
+        win.setSkipTaskbar(true);
+      }
+      appState.hideTray();
+    } else {
       appState.showTray();
     }
   } else {
@@ -1448,7 +1474,7 @@ async function initializeApp() {
     calMgr.init();
 
     calMgr.on('start-meeting-requested', (event: any) => {
-      console.log('[Main] Start meeting requested from calendar notification', event);
+      log.info('[Main] Start meeting requested from calendar notification', event);
       appState.centerAndShowWindow();
       appState.startMeeting({
         title: event.title,
@@ -1461,18 +1487,18 @@ async function initializeApp() {
       appState.centerAndShowWindow();
     });
 
-    console.log('[Main] CalendarManager initialized');
+    log.info('[Main] CalendarManager initialized');
   } catch (e) {
-    console.error('[Main] Failed to initialize CalendarManager:', e);
+    log.error('[Main] Failed to initialize CalendarManager:', e);
   }
 
   appState.getIntelligenceManager().recoverUnprocessedMeetings().catch(err => {
-    console.error('[Main] Failed to recover unprocessed meetings:', err);
+    log.error('[Main] Failed to recover unprocessed meetings:', err);
   });
 }
 
 app.on("activate", () => {
-  console.log("App activated")
+  log.info("App activated")
   const appState = AppState.getInstance();
   if (appState.getMainWindow() === null) {
     appState.createWindow()
@@ -1489,12 +1515,12 @@ app.on("before-quit", () => {
   try {
     CredentialsManager.getInstance().scrubMemory();
     AppState.getInstance().processingHelper.getLLMHelper().scrubKeys();
-    console.log('[Main] Credentials scrubbed from memory on quit');
+    log.info('[Main] Credentials scrubbed from memory on quit');
   } catch (e) {
-    console.error('[Main] Failed to scrub credentials on quit:', e);
+    log.error('[Main] Failed to scrub credentials on quit:', e);
   }
 })
 
 app.commandLine.appendSwitch("disable-background-timer-throttling")
 
-initializeApp().catch(console.error)
+initializeApp().catch(log.error)

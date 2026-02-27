@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 
 const { DatabaseManager } = require('./DatabaseManager');
 const path = require('path');
@@ -14,4 +15,5 @@ const { app } = require('electron');
 // For now, I will trust the implementation and ask the user to verify by running the app.
 // But I can try to make a dummy test that mocks electron if I wanted to run it with node.
 
-console.log("Database verification script ready (requires electron context)");
+log.info("Database verification script ready (requires electron context)");
+

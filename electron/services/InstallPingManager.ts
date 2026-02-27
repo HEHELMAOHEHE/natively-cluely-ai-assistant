@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 /**
  * ================================================================================
  * InstallPingManager - Anonymous Install Counter
@@ -73,10 +74,10 @@ export function getOrCreateInstallId(): string {
         // Generate new UUID
         const newId = uuidv4();
         fs.writeFileSync(INSTALL_ID_PATH, newId, 'utf-8');
-        console.log('[InstallPingManager] Generated new install ID');
+        log.info('[InstallPingManager] Generated new install ID');
         return newId;
     } catch (error) {
-        console.error('[InstallPingManager] Error managing install ID:', error);
+        log.error('[InstallPingManager] Error managing install ID:', error);
         // Return a temporary ID if we can't persist (ping may repeat, but that's fine)
         return uuidv4();
     }
@@ -103,9 +104,9 @@ function hasInstallPingBeenSent(): boolean {
 function markInstallPingSent(): void {
     try {
         fs.writeFileSync(INSTALL_PING_SENT_PATH, 'true', 'utf-8');
-        console.log('[InstallPingManager] Install ping marked as sent');
+        log.info('[InstallPingManager] Install ping marked as sent');
     } catch (error) {
-        console.error('[InstallPingManager] Error marking ping as sent:', error);
+        log.error('[InstallPingManager] Error marking ping as sent:', error);
     }
 }
 
@@ -127,7 +128,7 @@ export async function sendAnonymousInstallPing(): Promise<void> {
     try {
         // Early exit if ping already sent
         if (hasInstallPingBeenSent()) {
-            console.log('[InstallPingManager] Install ping already sent, skipping');
+            log.info('[InstallPingManager] Install ping already sent, skipping');
             return;
         }
 
@@ -142,7 +143,7 @@ export async function sendAnonymousInstallPing(): Promise<void> {
             platform: platform
         };
 
-        console.log('[InstallPingManager] Sending anonymous install ping...');
+        log.info('[InstallPingManager] Sending anonymous install ping...');
 
         // Non-blocking fetch with timeout
         const controller = new AbortController();
@@ -161,15 +162,15 @@ export async function sendAnonymousInstallPing(): Promise<void> {
 
         if (response.ok) {
             markInstallPingSent();
-            console.log('[InstallPingManager] Install ping sent successfully');
+            log.info('[InstallPingManager] Install ping sent successfully');
         } else {
             // Don't mark as sent on failure - will retry on next launch
-            console.log(`[InstallPingManager] Install ping failed with status: ${response.status}`);
+            log.info(`[InstallPingManager] Install ping failed with status: ${response.status}`);
         }
     } catch (error) {
         // Silently fail - this is non-critical functionality
         // Common reasons: no network, endpoint doesn't exist yet, timeout
-        console.log('[InstallPingManager] Install ping failed (silent):', error instanceof Error ? error.message : 'Unknown error');
+        log.info('[InstallPingManager] Install ping failed (silent):', error instanceof Error ? error.message : 'Unknown error');
     }
 }
 
@@ -180,3 +181,4 @@ export const InstallPingManager = {
     getOrCreateInstallId,
     sendAnonymousInstallPing
 };
+

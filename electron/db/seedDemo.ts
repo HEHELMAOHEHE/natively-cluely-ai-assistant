@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 
 const { DatabaseManager } = require('./DatabaseManager');
 const path = require('path');
@@ -13,4 +14,5 @@ const { app } = require('electron');
 // to seed if empty, OR expose an IPC.
 
 // Let's create a "Utilities" class or function in `electron/demoSeeder.ts` that we can invoke.
-console.log("Seed script placeholder.");
+log.info("Seed script placeholder.");
+

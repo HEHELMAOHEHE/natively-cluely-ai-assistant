@@ -6,32 +6,37 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   base: './', // Относительные пути для Electron
+  define: {
+    __dirname: 'undefined',
+    __filename: 'undefined'
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-      "@electron": path.resolve(__dirname, "electron"),
-      "@llm": path.resolve(__dirname, "electron/llm"),
-      "@services": path.resolve(__dirname, "electron/services"),
-      "@utils": path.resolve(__dirname, "electron/utils"),
-      "@rag": path.resolve(__dirname, "electron/rag"),
-      "@audio": path.resolve(__dirname, "electron/audio"),
-      "@db": path.resolve(__dirname, "electron/db"),
-      "@update": path.resolve(__dirname, "electron/update"),
-      "@config": path.resolve(__dirname, "electron/config"),
-    },
+      "@utils/logger": path.resolve(__dirname, "src/lib/logger.ts"),
+      "path": "path-browserify"
+    }
   },
   server: {
     port: 5180,
+    strictPort: true
+  },
+  optimizeDeps: {
+    include: ['path-browserify'],
+    exclude: ['electron', 'chunk-A55SIDN3']
   },
   build: {
-    chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      external: [
+        'electron',
+        /^node_modules\/electron/
+      ],
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'framer-motion'],
-          ui: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-toast'],
-        },
-      },
-    },
-  },
+          ui: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-toast']
+        }
+      }
+    }
+  }
 });

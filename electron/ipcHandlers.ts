@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 // ipcHandlers.ts
 
 import { app, ipcMain, shell, dialog, desktopCapturer, systemPreferences, BrowserWindow, screen } from "electron"
@@ -19,12 +20,12 @@ export function initializeIpcHandlers(appState: AppState): void {
   // --- NEW Test Helper ---
   safeHandle("test-release-fetch", async () => {
     try {
-      console.log("[IPC] Manual Test Fetch triggered (forcing refresh)...");
+      log.info("[IPC] Manual Test Fetch triggered (forcing refresh)...");
       const { ReleaseNotesManager } = require('./update/ReleaseNotesManager');
       const notes = await ReleaseNotesManager.getInstance().fetchReleaseNotes('latest', true);
 
       if (notes) {
-        console.log("[IPC] Notes fetched for:", notes.version);
+        log.info("[IPC] Notes fetched for:", notes.version);
         const info = {
           version: notes.version || 'latest',
           files: [] as any[],
@@ -40,7 +41,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       }
       return { success: false, error: "No notes returned" };
     } catch (err: any) {
-      console.error("[IPC] test-release-fetch failed:", err);
+      log.error("[IPC] test-release-fetch failed:", err);
       return { success: false, error: err.message };
     }
   });
@@ -84,7 +85,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const preview = await appState.getImagePreview(screenshotPath)
       return { path: screenshotPath, preview }
     } catch (error) {
-      // console.error("Error taking screenshot:", error)
+      // log.error("Error taking screenshot:", error)
       throw error
     }
   })
@@ -103,7 +104,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   })
 
   safeHandle("get-screenshots", async () => {
-    // console.log({ view: appState.getView() })
+    // log.info({ view: appState.getView() })
     try {
       let previews = []
       if (appState.getView() === "queue") {
@@ -121,10 +122,10 @@ export function initializeIpcHandlers(appState: AppState): void {
           }))
         )
       }
-      // previews.forEach((preview: any) => console.log(preview.path))
+      // previews.forEach((preview: any) => log.info(preview.path))
       return previews
     } catch (error) {
-      // console.error("Error getting screenshots:", error)
+      // log.error("Error getting screenshots:", error)
       throw error
     }
   })
@@ -145,10 +146,10 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle("reset-queues", async () => {
     try {
       appState.clearQueues()
-      // console.log("Screenshot queues have been cleared.")
+      // log.info("Screenshot queues have been cleared.")
       return { success: true }
     } catch (error: any) {
-      // console.error("Error resetting queues:", error)
+      // log.error("Error resetting queues:", error)
       return { success: false, error: error.message }
     }
   })
@@ -183,7 +184,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const suggestion = await appState.processingHelper.getLLMHelper().generateSuggestion(context, lastQuestion)
       return { suggestion }
     } catch (error: any) {
-      // console.error("Error generating suggestion:", error)
+      // log.error("Error generating suggestion:", error)
       throw error
     }
   })
@@ -194,7 +195,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const result = await appState.processingHelper.getLLMHelper().analyzeImageFile(path)
       return result
     } catch (error: any) {
-      // console.error("Error in analyze-image-file handler:", error)
+      // log.error("Error in analyze-image-file handler:", error)
       throw error
     }
   })
@@ -203,11 +204,11 @@ export function initializeIpcHandlers(appState: AppState): void {
     try {
       const result = await appState.processingHelper.getLLMHelper().chatWithGemini(message, imagePath, context, options?.skipSystemPrompt);
 
-      console.log(`[IPC] gemini - chat response: `, result ? result.substring(0, 50) : "(empty)");
+      log.info(`[IPC] gemini - chat response: `, result ? result.substring(0, 50) : "(empty)");
 
       // Don't process empty responses
       if (!result || result.trim().length === 0) {
-        console.warn("[IPC] Empty response from LLM, not updating IntelligenceManager");
+        log.warn("[IPC] Empty response from LLM, not updating IntelligenceManager");
         return "I apologize, but I couldn't generate a response. Please try again.";
       }
 
@@ -225,16 +226,16 @@ export function initializeIpcHandlers(appState: AppState): void {
       }, true);
 
       // 2. Add assistant response and set as last message
-      console.log(`[IPC] Updating IntelligenceManager with assistant message...`);
+      log.info(`[IPC] Updating IntelligenceManager with assistant message...`);
       intelligenceManager.addAssistantMessage(result);
-      console.log(`[IPC] Updated IntelligenceManager.Last message: `, intelligenceManager.getLastAssistantMessage()?.substring(0, 50));
+      log.info(`[IPC] Updated IntelligenceManager.Last message: `, intelligenceManager.getLastAssistantMessage()?.substring(0, 50));
 
       // Log Usage
       intelligenceManager.logUsage('chat', message, result);
 
       return result;
     } catch (error: any) {
-      // console.error("Error in gemini-chat handler:", error);
+      // log.error("Error in gemini-chat handler:", error);
       throw error;
     }
   });
@@ -242,7 +243,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Streaming IPC Handler
   safeHandle("gemini-chat-stream", async (event, message: string, imagePath?: string, context?: string, options?: { skipSystemPrompt?: boolean }) => {
     try {
-      console.log("[IPC] gemini-chat-stream started using LLMHelper.streamChat");
+      log.info("[IPC] gemini-chat-stream started using LLMHelper.streamChat");
       const llmHelper = appState.processingHelper.getLLMHelper();
 
       // Update IntelligenceManager with USER message immediately
@@ -264,10 +265,10 @@ export function initializeIpcHandlers(appState: AppState): void {
           const autoContext = intelligenceManager.getFormattedContext(100);
           if (autoContext && autoContext.trim().length > 0) {
             context = autoContext;
-            console.log(`[IPC] Auto - injected 100s context for gemini - chat - stream(${context.length} chars)`);
+            log.info(`[IPC] Auto - injected 100s context for gemini - chat - stream(${context.length} chars)`);
           }
         } catch (ctxErr) {
-          console.warn("[IPC] Failed to auto-inject context:", ctxErr);
+          log.warn("[IPC] Failed to auto-inject context:", ctxErr);
         }
       }
 
@@ -290,14 +291,14 @@ export function initializeIpcHandlers(appState: AppState): void {
         }
 
       } catch (streamError: any) {
-        console.error("[IPC] Streaming error:", streamError);
+        log.error("[IPC] Streaming error:", streamError);
         event.sender.send("gemini-stream-error", streamError.message || "Unknown streaming error");
       }
 
       return null; // Return null as data is sent via events
 
     } catch (error: any) {
-      console.error("[IPC] Error in gemini-chat-stream setup:", error);
+      log.error("[IPC] Error in gemini-chat-stream setup:", error);
       throw error;
     }
   });
@@ -307,7 +308,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   })
 
   safeHandle("quit-and-install-update", () => {
-    console.log('[IPC] quit-and-install-update handler called')
+    log.info('[IPC] quit-and-install-update handler called')
     appState.quitAndInstallUpdate()
   })
 
@@ -357,12 +358,12 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-undetectable", async (_, state: boolean) => {
     // Add stack trace to debug where calls are coming from
-    console.log('[IPC] set-undetectable called with state:', state, '- Stack:', new Error().stack);
+    log.info('[IPC] set-undetectable called with state:', state, '- Stack:', new Error().stack);
     
     // Prevent redundant IPC calls - only process if state actually changes
     const currentState = appState.getUndetectable();
     if (currentState === state) {
-      console.log('[IPC] set-undetectable: State unchanged, ignoring');
+      log.info('[IPC] set-undetectable: State unchanged, ignoring');
       return { success: true, state: currentState };
     }
     
@@ -403,7 +404,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         isOllama: llmHelper.isUsingOllama()
       };
     } catch (error: any) {
-      // console.error("Error getting current LLM config:", error);
+      // log.error("Error getting current LLM config:", error);
       throw error;
     }
   });
@@ -414,7 +415,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const models = await llmHelper.getOllamaModels();
       return models;
     } catch (error: any) {
-      // console.error("Error getting Ollama models:", error);
+      // log.error("Error getting Ollama models:", error);
       throw error;
     }
   });
@@ -425,7 +426,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       await llmHelper.switchToOllama(model, url);
       return { success: true };
     } catch (error: any) {
-      // console.error("Error switching to Ollama:", error);
+      // log.error("Error switching to Ollama:", error);
       return { success: false, error: error.message };
     }
   });
@@ -463,7 +464,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      // console.error("Error switching to Gemini:", error);
+      // log.error("Error switching to Gemini:", error);
       return { success: false, error: error.message };
     }
   });
@@ -483,7 +484,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving Gemini API key:", error);
+      log.error("Error saving Gemini API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -502,7 +503,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving Groq API key:", error);
+      log.error("Error saving Groq API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -521,7 +522,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving OpenAI API key:", error);
+      log.error("Error saving OpenAI API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -540,7 +541,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving Claude API key:", error);
+      log.error("Error saving Claude API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -556,7 +557,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const legacyProviders = cm.getCustomProviders() || [];
       return [...curlProviders, ...legacyProviders];
     } catch (error: any) {
-      console.error("Error getting custom providers:", error);
+      log.error("Error getting custom providers:", error);
       return [];
     }
   });
@@ -568,7 +569,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().saveCurlProvider(provider);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving custom provider:", error);
+      log.error("Error saving custom provider:", error);
       return { success: false, error: error.message };
     }
   });
@@ -581,7 +582,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().deleteCustomProvider(id);
       return { success: true };
     } catch (error: any) {
-      console.error("Error deleting custom provider:", error);
+      log.error("Error deleting custom provider:", error);
       return { success: false, error: error.message };
     }
   });
@@ -603,7 +604,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error switching to custom provider:", error);
+      log.error("Error switching to custom provider:", error);
       return { success: false, error: error.message };
     }
   });
@@ -614,7 +615,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const { CredentialsManager } = require('./services/CredentialsManager');
       return CredentialsManager.getInstance().getCurlProviders();
     } catch (error: any) {
-      console.error("Error getting curl providers:", error);
+      log.error("Error getting curl providers:", error);
       return [];
     }
   });
@@ -625,7 +626,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().saveCurlProvider(provider);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving curl provider:", error);
+      log.error("Error saving curl provider:", error);
       return { success: false, error: error.message };
     }
   });
@@ -636,7 +637,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().deleteCurlProvider(id);
       return { success: true };
     } catch (error: any) {
-      console.error("Error deleting curl provider:", error);
+      log.error("Error deleting curl provider:", error);
       return { success: false, error: error.message };
     }
   });
@@ -658,7 +659,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error switching to curl provider:", error);
+      log.error("Error switching to curl provider:", error);
       return { success: false, error: error.message };
     }
   });
@@ -708,7 +709,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error setting STT provider:", error);
+      log.error("Error setting STT provider:", error);
       return { success: false, error: error.message };
     }
   });
@@ -728,7 +729,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().setGroqSttApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving Groq STT API key:", error);
+      log.error("Error saving Groq STT API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -739,7 +740,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().setOpenAiSttApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving OpenAI STT API key:", error);
+      log.error("Error saving OpenAI STT API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -750,7 +751,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().setDeepgramApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving Deepgram API key:", error);
+      log.error("Error saving Deepgram API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -765,7 +766,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error setting Groq STT model:", error);
+      log.error("Error setting Groq STT model:", error);
       return { success: false, error: error.message };
     }
   });
@@ -776,7 +777,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().setElevenLabsApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving ElevenLabs API key:", error);
+      log.error("Error saving ElevenLabs API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -787,7 +788,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().setAzureApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving Azure API key:", error);
+      log.error("Error saving Azure API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -802,7 +803,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error setting Azure region:", error);
+      log.error("Error setting Azure region:", error);
       return { success: false, error: error.message };
     }
   });
@@ -813,7 +814,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       CredentialsManager.getInstance().setIbmWatsonApiKey(apiKey);
       return { success: true };
     } catch (error: any) {
-      console.error("Error saving IBM Watson API key:", error);
+      log.error("Error saving IBM Watson API key:", error);
       return { success: false, error: error.message };
     }
   });
@@ -825,7 +826,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   };
 
   safeHandle("test-stt-connection", async (_, provider: 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson', apiKey: string, region?: string) => {
-    console.log(`[IPC] Received test - stt - connection request for provider: ${provider} `);
+    log.info(`[IPC] Received test - stt - connection request for provider: ${provider} `);
     try {
       if (provider === 'deepgram') {
         // Test Deepgram via WebSocket connection
@@ -935,13 +936,13 @@ export function initializeIpcHandlers(appState: AppState): void {
     } catch (error: any) {
       const rawMsg = error?.response?.data?.error?.message || error?.response?.data?.message || error.message || 'Connection failed';
       const msg = sanitizeErrorMessage(rawMsg);
-      console.error("STT connection test failed:", msg);
+      log.error("STT connection test failed:", msg);
       return { success: false, error: msg };
     }
   });
 
   safeHandle("test-llm-connection", async (_, provider: 'gemini' | 'groq' | 'openai' | 'claude', apiKey?: string) => {
-    console.log(`[IPC] Received test-llm-connection request for provider: ${provider}`);
+    log.info(`[IPC] Received test-llm-connection request for provider: ${provider}`);
     try {
       if (!apiKey || !apiKey.trim()) {
         const { CredentialsManager } = require('./services/CredentialsManager');
@@ -999,7 +1000,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       }
 
     } catch (error: any) {
-      console.error("LLM connection test failed:", error);
+      log.error("LLM connection test failed:", error);
       const rawMsg = error?.response?.data?.error?.message || error?.response?.data?.message || (error.response?.data?.error?.type ? `${error.response.data.error.type}: ${error.response.data.error.message}` : error.message) || 'Connection failed';
       const msg = sanitizeErrorMessage(rawMsg);
       return { success: false, error: msg };
@@ -1057,7 +1058,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error setting model:", error);
+      log.error("Error setting model:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1088,7 +1089,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Error setting default model:", error);
+      log.error("Error setting default model:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1100,7 +1101,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const cm = CredentialsManager.getInstance();
       return { model: cm.getDefaultModel() };
     } catch (error: any) {
-      console.error("Error getting default model:", error);
+      log.error("Error getting default model:", error);
       return { model: 'gemini-3-flash-preview' };
     }
   });
@@ -1125,7 +1126,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const result = await llmHelper.testConnection();
       return result;
     } catch (error: any) {
-      // console.error("Error testing LLM connection:", error);
+      // log.error("Error testing LLM connection:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1169,7 +1170,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       await appState.startMeeting(metadata);
       return { success: true };
     } catch (error: any) {
-      console.error("Error starting meeting:", error);
+      log.error("Error starting meeting:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1179,7 +1180,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       await appState.endMeeting();
       return { success: true };
     } catch (error: any) {
-      console.error("Error ending meeting:", error);
+      log.error("Error ending meeting:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1208,7 +1209,7 @@ export function initializeIpcHandlers(appState: AppState): void {
     // Trigger RAG processing for the new demo meeting
     const ragManager = appState.getRAGManager();
     if (ragManager && ragManager.isReady()) {
-      ragManager.reprocessMeeting('demo-meeting').catch(console.error);
+      ragManager.reprocessMeeting('demo-meeting').catch(log.error);
     }
 
     return { success: true };
@@ -1225,10 +1226,10 @@ export function initializeIpcHandlers(appState: AppState): void {
       if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
         await shell.openExternal(url);
       } else {
-        console.warn(`[IPC] Blocked potentially unsafe open-external: ${url}`);
+        log.warn(`[IPC] Blocked potentially unsafe open-external: ${url}`);
       }
     } catch {
-      console.warn(`[IPC] Invalid URL in open-external: ${url}`);
+      log.warn(`[IPC] Invalid URL in open-external: ${url}`);
     }
   });
 
@@ -1355,7 +1356,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true, path: filePath };
     } catch (error: any) {
-      console.error("Error selecting service account:", error);
+      log.error("Error selecting service account:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1387,7 +1388,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       await CalendarManager.getInstance().startAuthFlow();
       return { success: true };
     } catch (error: any) {
-      console.error("Calendar auth error:", error);
+      log.error("Calendar auth error:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1437,7 +1438,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return emailBody;
     } catch (error: any) {
-      console.error("Error generating follow-up email:", error);
+      log.error("Error generating follow-up email:", error);
       throw error;
     }
   });
@@ -1447,7 +1448,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const { extractEmailsFromTranscript } = require('./utils/emailUtils');
       return extractEmailsFromTranscript(transcript);
     } catch (error: any) {
-      console.error("Error extracting emails:", error);
+      log.error("Error extracting emails:", error);
       return [];
     }
   });
@@ -1470,7 +1471,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return [];
     } catch (error: any) {
-      console.error("Error getting calendar attendees:", error);
+      log.error("Error getting calendar attendees:", error);
       return [];
     }
   });
@@ -1482,7 +1483,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       await shell.openExternal(mailtoUrl);
       return { success: true };
     } catch (error: any) {
-      console.error("Error opening mailto:", error);
+      log.error("Error opening mailto:", error);
       return { success: false, error: error.message };
     }
   });
@@ -1500,13 +1501,13 @@ export function initializeIpcHandlers(appState: AppState): void {
 
     if (!ragManager || !ragManager.isReady()) {
       // Fallback to regular chat if RAG not available
-      console.log("[RAG] Not ready, falling back to regular chat");
+      log.info("[RAG] Not ready, falling back to regular chat");
       return { fallback: true };
     }
 
     // Check if the meeting actually has embeddings
     if (!ragManager.isMeetingProcessed(meetingId)) {
-      console.log(`[RAG] Meeting ${meetingId} not processed, falling back to regular chat`);
+      log.info(`[RAG] Meeting ${meetingId} not processed, falling back to regular chat`);
       return { fallback: true };
     }
 
@@ -1530,11 +1531,11 @@ export function initializeIpcHandlers(appState: AppState): void {
         const msg = error.message || "";
         // If specific RAG failures, return fallback to use transcript window
         if (msg.includes('NO_RELEVANT_CONTEXT') || msg.includes('NO_MEETING_EMBEDDINGS')) {
-          console.log(`[RAG] Query failed with '${msg}', falling back to regular chat`);
+          log.info(`[RAG] Query failed with '${msg}', falling back to regular chat`);
           return { fallback: true };
         }
 
-        console.error("[RAG] Query error:", error);
+        log.error("[RAG] Query error:", error);
         event.sender.send("rag:stream-error", { meetingId, error: msg });
       }
       return { success: false, error: error.message };
@@ -1613,3 +1614,4 @@ export function initializeIpcHandlers(appState: AppState): void {
     return { success: true };
   });
 }
+

@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 import { nativeTheme, ipcMain, BrowserWindow, app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -37,7 +38,7 @@ export class ThemeManager {
                 }
             }
         } catch (error) {
-            console.error('Failed to load theme config:', error);
+            log.error('Failed to load theme config:', error);
         }
     }
 
@@ -46,7 +47,7 @@ export class ThemeManager {
             const config: ThemeConfig = { mode: this.mode };
             fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2));
         } catch (error) {
-            console.error('Failed to save theme config:', error);
+            log.error('Failed to save theme config:', error);
         }
     }
 
@@ -98,3 +99,4 @@ export class ThemeManager {
         });
     }
 }
+

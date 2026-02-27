@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 /**
  * RestSTT - REST-based Speech-to-Text for Groq, OpenAI Whisper, ElevenLabs, Azure, and IBM Watson
  *
@@ -125,7 +126,7 @@ export class RestSTT extends EventEmitter {
         if (modelOverride) {
             this.config.model = modelOverride;
         }
-        console.log(`[RestSTT] Initialized for provider: ${provider}, model: ${this.config.model || '(default)'}`);
+        log.info(`[RestSTT] Initialized for provider: ${provider}, model: ${this.config.model || '(default)'}`);
     }
 
     /**
@@ -134,7 +135,7 @@ export class RestSTT extends EventEmitter {
     public setApiKey(apiKey: string): void {
         this.apiKey = apiKey;
         this.config = PROVIDER_CONFIGS[this.provider](apiKey, this.region);
-        console.log(`[RestSTT] API key updated for ${this.provider}`);
+        log.info(`[RestSTT] API key updated for ${this.provider}`);
     }
 
     /**
@@ -142,7 +143,7 @@ export class RestSTT extends EventEmitter {
      */
     public setSampleRate(rate: number): void {
         if (this.sampleRate === rate) return;
-        console.log(`[RestSTT] Updating sample rate to ${rate}Hz`);
+        log.info(`[RestSTT] Updating sample rate to ${rate}Hz`);
         this.sampleRate = rate;
     }
 
@@ -151,7 +152,7 @@ export class RestSTT extends EventEmitter {
      */
     public setAudioChannelCount(count: number): void {
         if (this.numChannels === count) return;
-        console.log(`[RestSTT] Updating channel count to ${count}`);
+        log.info(`[RestSTT] Updating channel count to ${count}`);
         this.numChannels = count;
     }
 
@@ -160,14 +161,14 @@ export class RestSTT extends EventEmitter {
      */
     public setRecognitionLanguage(_key: string): void {
         // REST providers handle language automatically or via config
-        console.log(`[RestSTT] setRecognitionLanguage called (no-op for REST)`);
+        log.info(`[RestSTT] setRecognitionLanguage called (no-op for REST)`);
     }
 
     /**
      * No-op for RestSTT (no Google credentials needed)
      */
     public setCredentials(_keyFilePath: string): void {
-        console.log(`[RestSTT] setCredentials called (no-op for REST provider)`);
+        log.info(`[RestSTT] setCredentials called (no-op for REST provider)`);
     }
 
     /**
@@ -176,7 +177,7 @@ export class RestSTT extends EventEmitter {
     public start(): void {
         if (this.isActive) return;
 
-        console.log(`[RestSTT] Starting (${this.provider})...`);
+        log.info(`[RestSTT] Starting (${this.provider})...`);
         this.isActive = true;
         this.chunks = [];
         this.totalBufferedBytes = 0;
@@ -192,7 +193,7 @@ export class RestSTT extends EventEmitter {
     public stop(): void {
         if (!this.isActive) return;
 
-        console.log(`[RestSTT] Stopping (${this.provider})...`);
+        log.info(`[RestSTT] Stopping (${this.provider})...`);
         this.isActive = false;
 
         if (this.uploadTimer) {
@@ -233,7 +234,7 @@ export class RestSTT extends EventEmitter {
         // Check for silence (skip upload if audio is too quiet)
         if (this.isSilent(rawPcm)) {
             if (Math.random() < 0.1) {
-                console.log(`[RestSTT] Skipping silent buffer (${rawPcm.length} bytes)`);
+                log.info(`[RestSTT] Skipping silent buffer (${rawPcm.length} bytes)`);
             }
             return;
         }
@@ -247,7 +248,7 @@ export class RestSTT extends EventEmitter {
             const transcript = await this.uploadAudio(wavBuffer);
 
             if (transcript && transcript.trim().length > 0) {
-                console.log(`[RestSTT] Transcript: "${transcript.substring(0, 60)}..."`);
+                log.info(`[RestSTT] Transcript: "${transcript.substring(0, 60)}..."`);
                 this.emit('transcript', {
                     text: transcript.trim(),
                     isFinal: true,
@@ -255,7 +256,7 @@ export class RestSTT extends EventEmitter {
                 });
             }
         } catch (err) {
-            console.error(`[RestSTT] Upload error:`, err);
+            log.error(`[RestSTT] Upload error:`, err);
             this.emit('error', err instanceof Error ? err : new Error(String(err)));
         } finally {
             this.isUploading = false;
@@ -369,3 +370,4 @@ export class RestSTT extends EventEmitter {
         return buffer;
     }
 }
+

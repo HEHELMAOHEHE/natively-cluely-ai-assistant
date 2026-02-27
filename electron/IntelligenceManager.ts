@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 // IntelligenceManager.ts
 // Central orchestrator for the 5-mode intelligence layer
 // Uses mode-specific LLMs for Natively-style interview copilot
@@ -150,7 +151,7 @@ export class IntelligenceManager extends EventEmitter {
      * Must be called after API keys are updated.
      */
     public initializeLLMs(): void {
-        console.log(`[IntelligenceManager] Initializing LLMs with LLMHelper`);
+        log.info(`[IntelligenceManager] Initializing LLMs with LLMHelper`);
         this.answerLLM = new AnswerLLM(this.llmHelper);
         this.assistLLM = new AssistLLM(this.llmHelper);
         // Wait, I missed AssistLLM in my refactoring list. 
@@ -232,19 +233,19 @@ export class IntelligenceManager extends EventEmitter {
      * Add assistant-generated message to context
      */
     addAssistantMessage(text: string): void {
-        console.log(`[IntelligenceManager] addAssistantMessage called with:`, text.substring(0, 50));
+        log.info(`[IntelligenceManager] addAssistantMessage called with:`, text.substring(0, 50));
 
         // Natively-style filtering
         if (!text) return;
 
         const cleanText = text.trim();
         if (cleanText.length < 10) {
-            console.warn(`[IntelligenceManager] Ignored short message (<10 chars)`);
+            log.warn(`[IntelligenceManager] Ignored short message (<10 chars)`);
             return;
         }
 
         if (cleanText.includes("I'm not sure") || cleanText.includes("I can't answer")) {
-            console.warn(`[IntelligenceManager] Ignored fallback message`);
+            log.warn(`[IntelligenceManager] Ignored fallback message`);
             return;
         }
 
@@ -280,7 +281,7 @@ export class IntelligenceManager extends EventEmitter {
             this.assistantResponseHistory = this.assistantResponseHistory.slice(-10);
         }
 
-        console.log(`[IntelligenceManager] lastAssistantMessage updated, history size: ${this.assistantResponseHistory.length}`);
+        log.info(`[IntelligenceManager] lastAssistantMessage updated, history size: ${this.assistantResponseHistory.length}`);
         this.evictOldEntries();
     }
 
@@ -474,7 +475,7 @@ export class IntelligenceManager extends EventEmitter {
                     (lastItem.text === this.lastInterimInterviewer.text || Math.abs(lastItem.timestamp - this.lastInterimInterviewer.timestamp) < 1000); // 1s buffer
 
                 if (!isDuplicate) {
-                    console.log(`[IntelligenceManager] Injecting interim transcript: "${this.lastInterimInterviewer.text.substring(0, 50)}..."`);
+                    log.info(`[IntelligenceManager] Injecting interim transcript: "${this.lastInterimInterviewer.text.substring(0, 50)}..."`);
                     contextItems.push({
                         role: 'interviewer',
                         text: this.lastInterimInterviewer.text,
@@ -507,7 +508,7 @@ export class IntelligenceManager extends EventEmitter {
                 this.assistantResponseHistory.length
             );
 
-            console.log(`[IntelligenceManager] Temporal RAG: ${temporalContext.previousResponses.length} responses, tone: ${temporalContext.toneSignals[0]?.type || 'neutral'}, intent: ${intentResult.intent}${imagePath ? ', with image' : ''}`);
+            log.info(`[IntelligenceManager] Temporal RAG: ${temporalContext.previousResponses.length} responses, tone: ${temporalContext.toneSignals[0]?.type || 'neutral'}, intent: ${intentResult.intent}${imagePath ? ', with image' : ''}`);
 
             // Single-pass LLM call: question inference + answer generation with temporal context + intent
             // NOW STREAMING - with optional image support
@@ -557,9 +558,9 @@ export class IntelligenceManager extends EventEmitter {
      * Modify the last assistant message
      */
     async runFollowUp(intent: string, userRequest?: string): Promise<string | null> {
-        console.log(`[IntelligenceManager] runFollowUp called with intent: ${intent}`);
+        log.info(`[IntelligenceManager] runFollowUp called with intent: ${intent}`);
         if (!this.lastAssistantMessage) {
-            console.warn('[IntelligenceManager] No lastAssistantMessage found for follow-up');
+            log.warn('[IntelligenceManager] No lastAssistantMessage found for follow-up');
             return null;
         }
 
@@ -567,7 +568,7 @@ export class IntelligenceManager extends EventEmitter {
 
         try {
             if (!this.followUpLLM) {
-                console.error('[IntelligenceManager] FollowUpLLM not initialized');
+                log.error('[IntelligenceManager] FollowUpLLM not initialized');
                 this.setMode('idle');
                 return null;
             }
@@ -632,19 +633,19 @@ export class IntelligenceManager extends EventEmitter {
      * Neutral conversation summary
      */
     async runRecap(): Promise<string | null> {
-        console.log('[IntelligenceManager] runRecap called');
+        log.info('[IntelligenceManager] runRecap called');
         this.setMode('recap');
 
         try {
             if (!this.recapLLM) {
-                console.error('[IntelligenceManager] RecapLLM not initialized');
+                log.error('[IntelligenceManager] RecapLLM not initialized');
                 this.setMode('idle');
                 return null;
             }
 
             const context = this.getFormattedContext(120);
             if (!context) {
-                console.warn('[IntelligenceManager] No context available for recap');
+                log.warn('[IntelligenceManager] No context available for recap');
                 this.setMode('idle');
                 return null;
             }
@@ -685,19 +686,19 @@ export class IntelligenceManager extends EventEmitter {
      * Suggest strategic questions for the user to ask
      */
     async runFollowUpQuestions(): Promise<string | null> {
-        console.log('[IntelligenceManager] runFollowUpQuestions called');
+        log.info('[IntelligenceManager] runFollowUpQuestions called');
         this.setMode('follow_up_questions');
 
         try {
             if (!this.followUpQuestionsLLM) {
-                console.error('[IntelligenceManager] FollowUpQuestionsLLM not initialized');
+                log.error('[IntelligenceManager] FollowUpQuestionsLLM not initialized');
                 this.setMode('idle');
                 return null;
             }
 
             const context = this.getFormattedContext(120);
             if (!context) {
-                console.warn('[IntelligenceManager] No context available for follow-up questions');
+                log.warn('[IntelligenceManager] No context available for follow-up questions');
                 this.setMode('idle');
                 return null;
             }
@@ -791,7 +792,7 @@ export class IntelligenceManager extends EventEmitter {
         if (segment.speaker === 'interviewer') {
             // DEBUG LOGGING
             if (Math.random() < 0.05 || segment.final) {
-                console.log(`[IntelligenceManager] RX Interviewer Segment: Final=${segment.final} Text="${segment.text.substring(0, 50)}..."`);
+                log.info(`[IntelligenceManager] RX Interviewer Segment: Final=${segment.final} Text="${segment.text.substring(0, 50)}..."`);
             }
 
             if (!segment.final) {
@@ -868,13 +869,13 @@ export class IntelligenceManager extends EventEmitter {
                     );
                     if (epochSummary && epochSummary.trim().length > 0) {
                         this.transcriptEpochSummaries.push(epochSummary.trim());
-                        console.log(`[IntelligenceManager] Epoch summary created (${this.transcriptEpochSummaries.length} total)`);
+                        log.info(`[IntelligenceManager] Epoch summary created (${this.transcriptEpochSummaries.length} total)`);
                     }
                 } catch (e) {
                     // If summarization fails, store a simple marker
                     const fallback = `[Earlier discussion: ${oldEntries.length} segments, topics: ${oldEntries.slice(0, 3).map(s => s.text.substring(0, 40)).join('; ')}...]`;
                     this.transcriptEpochSummaries.push(fallback);
-                    console.warn('[IntelligenceManager] Epoch summarization failed, using fallback marker');
+                    log.warn('[IntelligenceManager] Epoch summarization failed, using fallback marker');
                 }
             }
 
@@ -914,11 +915,11 @@ export class IntelligenceManager extends EventEmitter {
      * Returns immediately so UI can switch.
      */
     public async stopMeeting(): Promise<void> {
-        console.log('[IntelligenceManager] Stopping meeting and queueing save...');
+        log.info('[IntelligenceManager] Stopping meeting and queueing save...');
 
         // 0. Force-save any pending interim transcript (e.g. interviewer was speaking when stopped)
         if (this.lastInterimInterviewer) {
-            console.log('[IntelligenceManager] Force-saving pending interim transcript:', this.lastInterimInterviewer.text);
+            log.info('[IntelligenceManager] Force-saving pending interim transcript:', this.lastInterimInterviewer.text);
             // Clone and mark as final so addTranscript accepts it
             const finalSegment = { ...this.lastInterimInterviewer, final: true };
             this.addTranscript(finalSegment);
@@ -928,7 +929,7 @@ export class IntelligenceManager extends EventEmitter {
         // 1. Snapshot valid data BEFORE resetting
         const durationMs = Date.now() - this.sessionStartTime;
         if (durationMs < 1000) {
-            console.log("Meeting too short, ignoring.");
+            log.info("Meeting too short, ignoring.");
             this.reset();
             return;
         }
@@ -946,7 +947,7 @@ export class IntelligenceManager extends EventEmitter {
 
         const meetingId = crypto.randomUUID();
         this.processAndSaveMeeting(snapshot, meetingId).catch(err => {
-            console.error('[IntelligenceManager] Background processing failed:', err);
+            log.error('[IntelligenceManager] Background processing failed:', err);
         });
 
         // 4. Initial Save (Placeholder)
@@ -972,7 +973,7 @@ export class IntelligenceManager extends EventEmitter {
             const wins = require('electron').BrowserWindow.getAllWindows();
             wins.forEach((w: any) => w.webContents.send('meetings-updated'));
         } catch (e) {
-            console.error("Failed to save placeholder", e);
+            log.error("Failed to save placeholder", e);
         }
     }
 
@@ -1036,13 +1037,13 @@ export class IntelligenceManager extends EventEmitter {
                     const jsonStr = (jsonMatch[1] || generatedSummary).trim();
                     try {
                         summaryData = JSON.parse(jsonStr);
-                    } catch (e) { console.error("Failed to parse summary JSON", e); }
+                    } catch (e) { log.error("Failed to parse summary JSON", e); }
                 }
             } else {
-                console.log("Transcript too short for summary generation.");
+                log.info("Transcript too short for summary generation.");
             }
         } catch (e) {
-            console.error("Error generating meeting metadata", e);
+            log.error("Error generating meeting metadata", e);
         }
 
         try {
@@ -1080,7 +1081,7 @@ export class IntelligenceManager extends EventEmitter {
             wins.forEach((w: any) => w.webContents.send('meetings-updated'));
 
         } catch (error) {
-            console.error('[IntelligenceManager] Failed to save meeting:', error);
+            log.error('[IntelligenceManager] Failed to save meeting:', error);
         }
     }
 
@@ -1088,23 +1089,23 @@ export class IntelligenceManager extends EventEmitter {
      * Recover meetings that were started but not fully processed (e.g. app crash)
      */
     public async recoverUnprocessedMeetings(): Promise<void> {
-        console.log('[IntelligenceManager] Checking for unprocessed meetings...');
+        log.info('[IntelligenceManager] Checking for unprocessed meetings...');
         const db = DatabaseManager.getInstance();
         const unprocessed = db.getUnprocessedMeetings();
 
         if (unprocessed.length === 0) {
-            console.log('[IntelligenceManager] No unprocessed meetings found.');
+            log.info('[IntelligenceManager] No unprocessed meetings found.');
             return;
         }
 
-        console.log(`[IntelligenceManager] Found ${unprocessed.length} unprocessed meetings. recovering...`);
+        log.info(`[IntelligenceManager] Found ${unprocessed.length} unprocessed meetings. recovering...`);
 
         for (const m of unprocessed) {
             try {
                 const details = db.getMeetingDetails(m.id);
                 if (!details) continue;
 
-                console.log(`[IntelligenceManager] Recovering meeting ${m.id}...`);
+                log.info(`[IntelligenceManager] Recovering meeting ${m.id}...`);
 
                 // Reconstruct context from transcript
                 // Format: [SPEAKER]: text
@@ -1127,10 +1128,10 @@ export class IntelligenceManager extends EventEmitter {
                 };
 
                 await this.processAndSaveMeeting(snapshot, m.id);
-                console.log(`[IntelligenceManager] Recovered meeting ${m.id}`);
+                log.info(`[IntelligenceManager] Recovered meeting ${m.id}`);
 
             } catch (e) {
-                console.error(`[IntelligenceManager] Failed to recover meeting ${m.id}`, e);
+                log.error(`[IntelligenceManager] Failed to recover meeting ${m.id}`, e);
             }
         }
     }
@@ -1159,3 +1160,4 @@ export class IntelligenceManager extends EventEmitter {
         this.initializeLLMs();
     }
 }
+

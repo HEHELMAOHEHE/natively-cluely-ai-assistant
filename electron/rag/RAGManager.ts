@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 // electron/rag/RAGManager.ts
 // Central orchestrator for RAG pipeline
 // Coordinates preprocessing, chunking, embedding, and retrieval
@@ -72,18 +73,18 @@ export class RAGManager {
         transcript: RawSegment[],
         summary?: string
     ): Promise<{ chunkCount: number }> {
-        console.log(`[RAGManager] Processing meeting ${meetingId} with ${transcript.length} segments`);
+        log.info(`[RAGManager] Processing meeting ${meetingId} with ${transcript.length} segments`);
 
         // 1. Preprocess transcript
         const cleaned = preprocessTranscript(transcript);
-        console.log(`[RAGManager] Preprocessed to ${cleaned.length} cleaned segments`);
+        log.info(`[RAGManager] Preprocessed to ${cleaned.length} cleaned segments`);
 
         // 2. Chunk the transcript
         const chunks = chunkTranscript(meetingId, cleaned);
-        console.log(`[RAGManager] Created ${chunks.length} chunks`);
+        log.info(`[RAGManager] Created ${chunks.length} chunks`);
 
         if (chunks.length === 0) {
-            console.log(`[RAGManager] No chunks to save for meeting ${meetingId}`);
+            log.info(`[RAGManager] No chunks to save for meeting ${meetingId}`);
             return { chunkCount: 0 };
         }
 
@@ -99,7 +100,7 @@ export class RAGManager {
         if (this.embeddingPipeline.isReady()) {
             await this.embeddingPipeline.queueMeeting(meetingId);
         } else {
-            console.log(`[RAGManager] Embeddings not ready, chunks saved without embeddings`);
+            log.info(`[RAGManager] Embeddings not ready, chunks saved without embeddings`);
         }
 
         return { chunkCount: chunks.length };
@@ -227,7 +228,7 @@ export class RAGManager {
      * Useful for demo meetings or reprocessing failed ones
      */
     async reprocessMeeting(meetingId: string): Promise<void> {
-        console.log(`[RAGManager] Reprocessing meeting ${meetingId}`);
+        log.info(`[RAGManager] Reprocessing meeting ${meetingId}`);
 
         // delete existing RAG data first to avoid duplicates
         this.deleteMeetingData(meetingId);
@@ -237,12 +238,12 @@ export class RAGManager {
         const meeting = DatabaseManager.getInstance().getMeetingDetails(meetingId);
 
         if (!meeting) {
-            console.error(`[RAGManager] Meeting ${meetingId} not found for reprocessing`);
+            log.error(`[RAGManager] Meeting ${meetingId} not found for reprocessing`);
             return;
         }
 
         if (!meeting.transcript || meeting.transcript.length === 0) {
-            console.log(`[RAGManager] Meeting ${meetingId} has no transcript, skipping`);
+            log.info(`[RAGManager] Meeting ${meetingId} has no transcript, skipping`);
             return;
         }
 
@@ -280,13 +281,13 @@ export class RAGManager {
         const meeting = DatabaseManager.getInstance().getMeetingDetails(demoId);
 
         if (!meeting) {
-            // console.log('[RAGManager] Demo meeting not found in DB, skipping RAG processing');
+            // log.info('[RAGManager] Demo meeting not found in DB, skipping RAG processing');
             return;
         }
 
         // Check if already processed (has embeddings)
         if (this.isMeetingProcessed(demoId)) {
-            // console.log('[RAGManager] Demo meeting already processed');
+            // log.info('[RAGManager] Demo meeting already processed');
             return;
         }
 
@@ -296,7 +297,7 @@ export class RAGManager {
         // Ideally we check if *this* meeting is in queue. 
         // For now, relies on isMeetingProcessed check mostly.
 
-        console.log('[RAGManager] Demo meeting found but not processed. Processing now...');
+        log.info('[RAGManager] Demo meeting found but not processed. Processing now...');
         await this.reprocessMeeting(demoId);
     }
 
@@ -310,10 +311,11 @@ export class RAGManager {
                 WHERE meeting_id NOT IN (SELECT id FROM meetings)
             `).run();
             if (info.changes > 0) {
-                console.log(`[RAGManager] Cleaned up ${info.changes} stale queue items`);
+                log.info(`[RAGManager] Cleaned up ${info.changes} stale queue items`);
             }
         } catch (error) {
-            console.error('[RAGManager] Failed to cleanup stale queue items:', error);
+            log.error('[RAGManager] Failed to cleanup stale queue items:', error);
         }
     }
 }
+

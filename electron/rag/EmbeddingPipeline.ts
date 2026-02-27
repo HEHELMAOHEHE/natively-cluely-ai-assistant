@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 // electron/rag/EmbeddingPipeline.ts
 // Post-meeting embedding generation with queue-based retry logic
 // Uses Gemini text-embedding-004 (768 dimensions)
@@ -38,11 +39,11 @@ export class EmbeddingPipeline {
      */
     initialize(apiKey: string): void {
         if (!apiKey) {
-            console.log('[EmbeddingPipeline] No API key provided, embeddings disabled');
+            log.info('[EmbeddingPipeline] No API key provided, embeddings disabled');
             return;
         }
         this.client = new GoogleGenAI({ apiKey });
-        console.log('[EmbeddingPipeline] Initialized with Gemini embedding model: ' + EMBEDDING_MODEL);
+        log.info('[EmbeddingPipeline] Initialized with Gemini embedding model: ' + EMBEDDING_MODEL);
 
         // Debug: List models to find valid embedding model
         // We use the REST API because the SDK list method is elusive or failing
@@ -50,9 +51,9 @@ export class EmbeddingPipeline {
             .then(res => res.json())
             .then((data: any) => {
                 const models = data.models?.filter((m: any) => m.supportedGenerationMethods?.includes('embedContent'));
-                console.log('[EmbeddingPipeline] Available embedding models:', models?.map((m: any) => m.name));
+                log.info('[EmbeddingPipeline] Available embedding models:', models?.map((m: any) => m.name));
             })
-            .catch(err => console.error('[EmbeddingPipeline] Failed to list models:', err));
+            .catch(err => log.error('[EmbeddingPipeline] Failed to list models:', err));
     }
 
     /**
@@ -71,7 +72,7 @@ export class EmbeddingPipeline {
         const chunks = this.vectorStore.getChunksWithoutEmbeddings(meetingId);
 
         if (chunks.length === 0) {
-            console.log(`[EmbeddingPipeline] No chunks to embed for meeting ${meetingId}`);
+            log.info(`[EmbeddingPipeline] No chunks to embed for meeting ${meetingId}`);
             return;
         }
 
@@ -90,11 +91,11 @@ export class EmbeddingPipeline {
         });
 
         queueAll();
-        console.log(`[EmbeddingPipeline] Queued ${chunks.length} chunks + 1 summary for meeting ${meetingId}`);
+        log.info(`[EmbeddingPipeline] Queued ${chunks.length} chunks + 1 summary for meeting ${meetingId}`);
 
         // Start processing in background
         this.processQueue().catch(err => {
-            console.error('[EmbeddingPipeline] Queue processing error:', err);
+            log.error('[EmbeddingPipeline] Queue processing error:', err);
         });
     }
 
@@ -103,12 +104,12 @@ export class EmbeddingPipeline {
      */
     async processQueue(): Promise<void> {
         if (this.isProcessing) {
-            console.log('[EmbeddingPipeline] Already processing queue');
+            log.info('[EmbeddingPipeline] Already processing queue');
             return;
         }
 
         if (!this.client) {
-            console.log('[EmbeddingPipeline] No client, skipping queue processing');
+            log.info('[EmbeddingPipeline] No client, skipping queue processing');
             return;
         }
 
@@ -125,7 +126,7 @@ export class EmbeddingPipeline {
                 `).get(MAX_RETRIES) as any;
 
                 if (!pending) {
-                    console.log('[EmbeddingPipeline] Queue empty');
+                    log.info('[EmbeddingPipeline] Queue empty');
                     break;
                 }
 
@@ -149,7 +150,7 @@ export class EmbeddingPipeline {
                     `).run(new Date().toISOString(), pending.id);
 
                 } catch (error: any) {
-                    console.error(`[EmbeddingPipeline] Error processing queue item ${pending.id}:`, error.message);
+                    log.error(`[EmbeddingPipeline] Error processing queue item ${pending.id}:`, error.message);
 
                     // Update retry count and status
                     this.db.prepare(`
@@ -195,14 +196,14 @@ export class EmbeddingPipeline {
         // Get chunk text
         const row = this.db.prepare('SELECT cleaned_text FROM chunks WHERE id = ?').get(chunkId) as any;
         if (!row) {
-            console.log(`[EmbeddingPipeline] Chunk ${chunkId} not found, skipping`);
+            log.info(`[EmbeddingPipeline] Chunk ${chunkId} not found, skipping`);
             return;
         }
 
         const embedding = await this.getEmbedding(row.cleaned_text);
         this.vectorStore.storeEmbedding(chunkId, embedding);
 
-        console.log(`[EmbeddingPipeline] Embedded chunk ${chunkId}`);
+        log.info(`[EmbeddingPipeline] Embedded chunk ${chunkId}`);
     }
 
     /**
@@ -215,14 +216,14 @@ export class EmbeddingPipeline {
         ).get(meetingId) as any;
 
         if (!row) {
-            console.log(`[EmbeddingPipeline] No summary for meeting ${meetingId}, skipping`);
+            log.info(`[EmbeddingPipeline] No summary for meeting ${meetingId}, skipping`);
             return;
         }
 
         const embedding = await this.getEmbedding(row.summary_text);
         this.vectorStore.storeSummaryEmbedding(meetingId, embedding);
 
-        console.log(`[EmbeddingPipeline] Embedded summary for meeting ${meetingId}`);
+        log.info(`[EmbeddingPipeline] Embedded summary for meeting ${meetingId}`);
     }
 
     /**
@@ -268,3 +269,4 @@ export class EmbeddingPipeline {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
+

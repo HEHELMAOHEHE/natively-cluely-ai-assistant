@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 // ScreenshotHelper.ts
 
 import path from "node:path"
@@ -99,7 +100,7 @@ export class ScreenshotHelper {
     this.screenshotQueue.forEach((screenshotPath) => {
       fs.unlink(screenshotPath, (err) => {
         if (err) {
-          // console.error(`Error deleting screenshot at ${screenshotPath}:`, err)
+          // log.error(`Error deleting screenshot at ${screenshotPath}:`, err)
         }
       })
     })
@@ -109,7 +110,7 @@ export class ScreenshotHelper {
     this.extraScreenshotQueue.forEach((screenshotPath) => {
       fs.unlink(screenshotPath, (err) => {
         if (err) {
-          // console.error(
+          // log.error(
           //   `Error deleting extra screenshot at ${screenshotPath}:`,
           //   err
           // )
@@ -148,7 +149,7 @@ export class ScreenshotHelper {
             try {
               await fs.promises.unlink(removedPath)
             } catch (error) {
-              console.error("Error removing old screenshot:", error)
+              log.error("Error removing old screenshot:", error)
             }
           }
         }
@@ -167,7 +168,7 @@ export class ScreenshotHelper {
             try {
               await fs.promises.unlink(removedPath)
             } catch (error) {
-              console.error("Error removing old screenshot:", error)
+              log.error("Error removing old screenshot:", error)
             }
           }
         }
@@ -175,7 +176,7 @@ export class ScreenshotHelper {
 
       return screenshotPath
     } catch (error) {
-      // console.error("Error taking screenshot:", error)
+      // log.error("Error taking screenshot:", error)
       throw new Error(`Failed to take screenshot: ${error.message}`)
     } finally {
       // Ensure window is always shown again
@@ -242,7 +243,7 @@ export class ScreenshotHelper {
           }
         }
       } catch (error) {
-        // console.log(`[ScreenshotHelper] Retry ${i + 1}/${maxRetries} failed:`, error)
+        // log.info(`[ScreenshotHelper] Retry ${i + 1}/${maxRetries} failed:`, error)
       }
       // Wait for file system
       await new Promise((resolve) => setTimeout(resolve, delay))
@@ -267,8 +268,9 @@ export class ScreenshotHelper {
       }
       return { success: true }
     } catch (error) {
-      // console.error("Error deleting file:", error)
+      // log.error("Error deleting file:", error)
       return { success: false, error: error.message }
     }
   }
 }
+

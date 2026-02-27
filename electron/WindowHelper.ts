@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 
 import { BrowserWindow, screen, app } from "electron"
 import { AppState } from "./main"
@@ -7,7 +8,7 @@ const isEnvDev = process.env.NODE_ENV === "development"
 const isPackaged = app.isPackaged;
 const inAppBundle = process.execPath.includes('.app/') || process.execPath.includes('.app\\');
 
-console.log(`[WindowHelper] isEnvDev: ${isEnvDev}, isPackaged: ${isPackaged}, inAppBundle: ${inAppBundle}`);
+log.info(`[WindowHelper] isEnvDev: ${isEnvDev}, isPackaged: ${isPackaged}, inAppBundle: ${inAppBundle}`);
 
 // Force production mode if running as packaged app or inside app bundle
 const isDev = isEnvDev && !isPackaged;
@@ -42,14 +43,30 @@ export class WindowHelper {
     this.appState = appState
   }
 
+  // Track current content protection state to avoid redundant logging
+  private contentProtectionState: boolean = false;
+  // Guard to prevent double-toggle
+  private isToggling: boolean = false;
+
   public setContentProtection(enable: boolean): void {
+    log.info(`[WindowHelper] setContentProtection called with: ${enable}, current state: ${this.contentProtectionState}`);
+    
+    // Check if value actually changes BEFORE updating state
+    const stateChanged = this.contentProtectionState !== enable;
+    if (stateChanged) {
+      this.contentProtectionState = enable;
+      log.info(`[WindowHelper] Content Protection CHANGED to: ${enable}`);
+    } else {
+      log.info(`[WindowHelper] Content Protection unchanged (already ${enable})`);
+    }
+    
+    // Always apply content protection
     if (this.launcherWindow && !this.launcherWindow.isDestroyed()) {
       this.launcherWindow.setContentProtection(enable)
     }
     if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
       this.overlayWindow.setContentProtection(enable)
     }
-    console.log(`[WindowHelper] Content Protection set to: ${enable}`)
   }
 
   public setWindowDimensions(width: number, height: number): void {
@@ -82,7 +99,7 @@ export class WindowHelper {
   // Dedicated method for overlay window resizing - decoupled from launcher
   public setOverlayDimensions(width: number, height: number): void {
     if (!this.overlayWindow || this.overlayWindow.isDestroyed()) return
-    console.log('[WindowHelper] setOverlayDimensions:', width, height);
+    log.info('[WindowHelper] setOverlayDimensions:', width, height);
 
     const [currentX, currentY] = this.overlayWindow.getPosition()
     const primaryDisplay = screen.getPrimaryDisplay()
@@ -140,7 +157,7 @@ export class WindowHelper {
       visualEffectState: 'followWindow',
       transparent: false, // DEBUG: Disable transparency
       hasShadow: true,
-      backgroundColor: "#000000", // Fixed: Black background to match startup sequence
+      backgroundColor: "#1E1E21", // Dark background for the app
       focusable: true,
       resizable: true,
       movable: true,
@@ -150,25 +167,39 @@ export class WindowHelper {
         : path.resolve(__dirname, "../assets/natively.icns")
     }
 
-    console.log(`[WindowHelper] Icon Path: ${launcherSettings.icon}`);
-    console.log(`[WindowHelper] Start URL: ${startUrl}`);
+    log.info(`[WindowHelper] Icon Path: ${launcherSettings.icon}`);
+    log.info(`[WindowHelper] Start URL: ${startUrl}`);
 
     try {
       this.launcherWindow = new BrowserWindow(launcherSettings)
-      console.log('[WindowHelper] BrowserWindow created successfully');
+      log.info('[WindowHelper] BrowserWindow created successfully');
+
+      // Capture console logs from renderer
+      this.launcherWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        const levelStr = ['verbose', 'info', 'warn', 'error'][level] || 'info';
+        log.info(`[Renderer Console ${levelStr}]: ${message}`);
+      });
     } catch (err) {
-      console.error('[WindowHelper] Failed to create BrowserWindow:', err);
+      log.error('[WindowHelper] Failed to create BrowserWindow:', err);
       return;
     }
 
     this.launcherWindow.setContentProtection(this.appState.getUndetectable())
 
     this.launcherWindow.loadURL(`${startUrl}?window=launcher`)
-      .then(() => console.log('[WindowHelper] loadURL success'))
-      .catch((e) => { console.error("[WindowHelper] Failed to load URL:", e) })
+      .then(() => log.info('[WindowHelper] loadURL success'))
+      .catch((e) => { log.error("[WindowHelper] Failed to load URL:", e) })
 
     this.launcherWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error(`[WindowHelper] did-fail-load: ${errorCode} ${errorDescription}`);
+      log.error(`[WindowHelper] did-fail-load: ${errorCode} ${errorDescription}`);
+    });
+
+    this.launcherWindow.webContents.on('render-process-gone', (event, details) => {
+      log.error(`[WindowHelper] render-process-gone: ${details.reason}`);
+    });
+
+    this.launcherWindow.webContents.on('crashed', () => {
+      log.error('[WindowHelper] Renderer crashed');
     });
 
     // if (isDev) {
@@ -212,6 +243,7 @@ export class WindowHelper {
 
     // --- 3. Startup Sequence ---
     this.launcherWindow.once('ready-to-show', () => {
+      log.info('[WindowHelper] ready-to-show fired, showing window');
       this.launcherWindow?.show()
       this.launcherWindow?.focus()
       this.isWindowVisible = true
@@ -288,17 +320,31 @@ export class WindowHelper {
   }
 
   public showMainWindow(): void {
-    // Show the window corresponding to the current mode
+    log.info(`[WindowHelper] showMainWindow called, isUndetectable: ${this.appState.getUndetectable()}`);
+    
+    // Show the window first
     if (this.currentWindowMode === 'overlay') {
       this.switchToOverlay();
     } else {
       this.switchToLauncher();
     }
-    // Preserve Undetectable state
-    this.setContentProtection(this.appState.getUndetectable());
+    
+    // Apply content protection after showing window
+    const shouldBeProtected = this.appState.getUndetectable();
+    this.setContentProtection(shouldBeProtected);
   }
 
   public toggleMainWindow(): void {
+    // Guard against double-toggle (global shortcut + menu accelerator both fire)
+    if (this.isToggling) {
+      log.info('[WindowHelper] toggleMainWindow skipped - already toggling');
+      return;
+    }
+    
+    this.isToggling = true;
+    setTimeout(() => { this.isToggling = false; }, 100);
+    
+    log.info(`[WindowHelper] toggleMainWindow called, isWindowVisible: ${this.isWindowVisible}`);
     if (this.isWindowVisible) {
       this.hideMainWindow()
     } else {
@@ -319,7 +365,7 @@ export class WindowHelper {
   // --- Swapping Logic ---
 
   public switchToOverlay(): void {
-    console.log('[WindowHelper] Switching to OVERLAY');
+    log.info('[WindowHelper] Switching to OVERLAY');
     this.currentWindowMode = 'overlay';
 
     // Show Overlay FIRST
@@ -347,7 +393,7 @@ export class WindowHelper {
   }
 
   public switchToLauncher(): void {
-    console.log('[WindowHelper] Switching to LAUNCHER');
+    log.info('[WindowHelper] Switching to LAUNCHER');
     this.currentWindowMode = 'launcher';
 
     // Show Launcher FIRST
@@ -390,3 +436,4 @@ export class WindowHelper {
   public moveWindowDown(): void { this.moveActiveWindow(0, this.step) }
   public moveWindowUp(): void { this.moveActiveWindow(0, -this.step) }
 }
+

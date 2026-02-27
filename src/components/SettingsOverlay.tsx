@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect } from 'react';
 import packageJson from '../../package.json';
 import {
@@ -456,7 +457,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                     setHasStoredIbmWatsonKey(creds.hasIbmWatsonKey);
                 }
             } catch (e) {
-                console.error('Failed to load STT settings:', e);
+                log.error('Failed to load STT settings:', e);
             }
         };
         if (isOpen) loadSttSettings();
@@ -471,7 +472,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
             // @ts-ignore
             await window.electronAPI?.setSttProvider?.(provider);
         } catch (e) {
-            console.error('Failed to set STT provider:', e);
+            log.error('Failed to set STT provider:', e);
         }
     };
 
@@ -531,7 +532,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
             setSttSaved(true);
             setTimeout(() => setSttSaved(false), 2000);
         } catch (e: any) {
-            console.error(`Failed to save ${provider} STT key:`, e);
+            log.error(`Failed to save ${provider} STT key:`, e);
             setSttTestStatus('error');
             setSttTestError(e.message || 'Validation failed');
         } finally {
@@ -575,7 +576,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                 setHasStoredDeepgramKey(false);
             }
         } catch (e) {
-            console.error(`Failed to remove ${provider} STT key:`, e);
+            log.error(`Failed to remove ${provider} STT key:`, e);
         }
     };
 
@@ -635,7 +636,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
         try {
             await window.electronAPI.checkForUpdates();
         } catch (error) {
-            console.error("Failed to check for updates:", error);
+            log.error("Failed to check for updates:", error);
             setUpdateStatus('error');
             setTimeout(() => setUpdateStatus('idle'), 3000);
         }
@@ -657,7 +658,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                 setTimeout(() => setUpdateStatus('idle'), 3000);
             }),
             window.electronAPI.onUpdateError((err) => {
-                console.error('[Settings] Update error:', err);
+                log.error('[Settings] Update error:', err);
                 setUpdateStatus('error');
                 setTimeout(() => setUpdateStatus('idle'), 3000);
             })
@@ -717,7 +718,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                         setSelectedOutput(outputs[0].id);
                     }
                 } catch (e) {
-                    console.error("Error loading native devices:", e);
+                    log.error("Error loading native devices:", e);
                 }
             };
             loadDevices();
@@ -805,7 +806,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
 
                     updateLevel();
                 } catch (error) {
-                    console.error("Error accessing microphone:", error);
+                    log.error("Error accessing microphone:", error);
                     setMicLevel(0); // Reset level on error
                 }
             };
@@ -954,7 +955,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                             <div
                                                 onClick={() => {
                                                     const newState = !isUndetectable;
-                                                    console.log('[Renderer] SettingsOverlay onClick - toggling to:', newState);
+                                                    log.info('[Renderer] SettingsOverlay onClick - toggling to:', newState);
                                                     setIsUndetectable(newState);
                                                     // Call setUndetectable on user action
                                                     window.electronAPI?.setUndetectable?.(newState);
@@ -1094,7 +1095,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                                                     await window.electronAPI.downloadUpdate();
                                                                     onClose(); // Close settings to show the banner
                                                                 } catch (err) {
-                                                                    console.error("Failed to start download:", err);
+                                                                    log.error("Failed to start download:", err);
                                                                 }
                                                             } else {
                                                                 handleCheckForUpdates();
@@ -1368,7 +1369,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                                                         // @ts-ignore
                                                                         await window.electronAPI?.setGroqSttModel?.(m.id);
                                                                     } catch (e) {
-                                                                        console.error('Failed to set Groq model:', e);
+                                                                        log.error('Failed to set Groq model:', e);
                                                                     }
                                                                 }}
                                                                 className={`rounded-lg px-3 py-2.5 text-left transition-all duration-200 ease-in-out active:scale-[0.98] ${groqSttModel === m.id
@@ -1643,7 +1644,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                                         try {
                                                             const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
                                                             if (!AudioContext) {
-                                                                console.error("Web Audio API not supported");
+                                                                log.error("Web Audio API not supported");
                                                                 return;
                                                             }
 
@@ -1668,14 +1669,14 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                                                 try {
                                                                     await (ctx as any).setSinkId(selectedOutput);
                                                                 } catch (e) {
-                                                                    console.warn("Error setting sink for AudioContext", e);
+                                                                    log.warn("Error setting sink for AudioContext", e);
                                                                 }
                                                             }
 
                                                             oscillator.start();
                                                             oscillator.stop(ctx.currentTime + 1.0);
                                                         } catch (e) {
-                                                            console.error("Error playing test sound", e);
+                                                            log.error("Error playing test sound", e);
                                                         }
                                                     }}
                                                     className="text-xs bg-bg-input hover:bg-bg-elevated text-text-primary px-3 py-1.5 rounded-md transition-colors flex items-center gap-2"
@@ -1749,7 +1750,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                                             const status = await window.electronAPI.getCalendarStatus();
                                                             setCalendarStatus(status);
                                                         } catch (e) {
-                                                            console.error(e);
+                                                            log.error(e);
                                                         } finally {
                                                             setIsCalendarsLoading(false);
                                                         }
@@ -1778,7 +1779,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose }) =>
                                                                 setCalendarStatus(status);
                                                             }
                                                         } catch (e) {
-                                                            console.error(e);
+                                                            log.error(e);
                                                         } finally {
                                                             setIsCalendarsLoading(false);
                                                         }

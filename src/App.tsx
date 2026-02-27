@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect } from "react" // forcing refresh
 import { QueryClient, QueryClientProvider } from "react-query"
 import { ToastProvider, ToastViewport } from "./components/ui/toast"
@@ -14,7 +15,28 @@ import { analytics } from "./lib/analytics/analytics.service"
 
 const queryClient = new QueryClient()
 
+// Global error handler for renderer errors
+window.onerror = (message, source, lineno, colno, error) => {
+  log.error('Global error:', message, source, lineno, colno, error);
+  return false;
+};
+
+window.onunhandledrejection = (event) => {
+  log.error('Unhandled rejection:', event.reason);
+};
+
 const App: React.FC = () => {
+  const [renderError, setRenderError] = useState<string | null>(null);
+
+  // Track errors
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      log.error('Render error:', event.error);
+      setRenderError(event.error?.message || 'Unknown error');
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
   const isSettingsWindow = new URLSearchParams(window.location.search).get('window') === 'settings';
   const isLauncherWindow = new URLSearchParams(window.location.search).get('window') === 'launcher';
   const isOverlayWindow = new URLSearchParams(window.location.search).get('window') === 'overlay';
@@ -22,6 +44,24 @@ const App: React.FC = () => {
 
   // Default to launcher if not specified (dev mode safety)
   const isDefault = !isSettingsWindow && !isOverlayWindow && !isModelSelectorWindow;
+
+  // Show error screen if there's a render error
+  if (renderError) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-red-900 text-white p-8">
+        <div className="max-w-lg text-center">
+          <h1 className="text-2xl font-bold mb-4 text-red-300">Error</h1>
+          <p className="text-red-200 mb-4">{renderError}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded-lg"
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Initialize Analytics
   useEffect(() => {
@@ -71,10 +111,10 @@ const App: React.FC = () => {
       // Override output device ID to force SCK if experimental mode is enabled
       // Default to SCK unless legacy is enabled
       if (!useLegacyAudio) {
-        console.log("[App] Using ScreenCaptureKit backend (Default).");
+        log.info("[App] Using ScreenCaptureKit backend (Default).");
         outputDeviceId = "sck";
       } else {
-        console.log("[App] Using Legacy CoreAudio backend (User Preference).");
+        log.info("[App] Using Legacy CoreAudio backend (User Preference).");
       }
 
       const result = await window.electronAPI.startMeeting({
@@ -89,23 +129,23 @@ const App: React.FC = () => {
         // Let's explicitly request mode change.
         await window.electronAPI.setWindowMode('overlay');
       } else {
-        console.error("Failed to start meeting:", result.error);
+        log.error("Failed to start meeting:", result.error);
       }
     } catch (err) {
-      console.error("Failed to start meeting:", err);
+      log.error("Failed to start meeting:", err);
     }
   };
 
   const handleEndMeeting = async () => {
-    console.log("[App.tsx] handleEndMeeting triggered");
+    log.info("[App.tsx] handleEndMeeting triggered");
     analytics.trackMeetingEnded();
     try {
       await window.electronAPI.endMeeting();
-      console.log("[App.tsx] endMeeting IPC completed");
+      log.info("[App.tsx] endMeeting IPC completed");
       // Switch back to Native Launcher Mode
       await window.electronAPI.setWindowMode('launcher');
     } catch (err) {
-      console.error("Failed to end meeting:", err);
+      log.error("Failed to end meeting:", err);
       window.electronAPI.setWindowMode('launcher');
     }
   };

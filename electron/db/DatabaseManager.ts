@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 
 import Database from 'better-sqlite3';
 import path from 'path';
@@ -53,33 +54,33 @@ export class DatabaseManager {
 
     private init() {
         try {
-            console.log(`[DatabaseManager] Initializing database at ${this.dbPath}`);
+            log.info(`[DatabaseManager] Initializing database at ${this.dbPath}`);
             // Ensure directory exists (though userData usually does)
             const dir = path.dirname(this.dbPath);
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
-                console.log(`[DatabaseManager] Created directory: ${dir}`);
+                log.info(`[DatabaseManager] Created directory: ${dir}`);
             } else {
-                console.log(`[DatabaseManager] Directory exists: ${dir}`);
+                log.info(`[DatabaseManager] Directory exists: ${dir}`);
                 try {
                     const files = fs.readdirSync(dir);
-                    console.log(`[DatabaseManager] Directory contents:`, files);
+                    log.info(`[DatabaseManager] Directory contents:`, files);
                     const dbExists = fs.existsSync(this.dbPath);
                     if (dbExists) {
                         const stats = fs.statSync(this.dbPath);
-                        console.log(`[DatabaseManager] Found existing DB. Size: ${stats.size} bytes`);
+                        log.info(`[DatabaseManager] Found existing DB. Size: ${stats.size} bytes`);
                     } else {
-                        console.log(`[DatabaseManager] No existing DB found at ${this.dbPath}. Creating new one.`);
+                        log.info(`[DatabaseManager] No existing DB found at ${this.dbPath}. Creating new one.`);
                     }
                 } catch (e) {
-                    console.error('[DatabaseManager] Error checking directory/file:', e);
+                    log.error('[DatabaseManager] Error checking directory/file:', e);
                 }
             }
 
             this.db = new Database(this.dbPath);
             this.runMigrations();
         } catch (error) {
-            console.error('[DatabaseManager] Failed to initialize database:', error);
+            log.error('[DatabaseManager] Failed to initialize database:', error);
             throw error;
         }
     }
@@ -192,7 +193,7 @@ export class DatabaseManager {
             this.db.exec("ALTER TABLE meetings ADD COLUMN is_processed INTEGER DEFAULT 1"); // Default to 1 (true) for existing records
         } catch (e) { /* Column likely exists */ }
 
-        console.log('[DatabaseManager] Migrations completed.');
+        log.info('[DatabaseManager] Migrations completed.');
     }
 
     // ============================================
@@ -201,7 +202,7 @@ export class DatabaseManager {
 
     public saveMeeting(meeting: Meeting, startTimeMs: number, durationMs: number) {
         if (!this.db) {
-            console.error('[DatabaseManager] DB not initialized');
+            log.error('[DatabaseManager] DB not initialized');
             return;
         }
 
@@ -284,9 +285,9 @@ export class DatabaseManager {
 
         try {
             runTransaction();
-            console.log(`[DatabaseManager] Successfully saved meeting ${meeting.id}`);
+            log.info(`[DatabaseManager] Successfully saved meeting ${meeting.id}`);
         } catch (err) {
-            console.error(`[DatabaseManager] Failed to save meeting ${meeting.id}`, err);
+            log.error(`[DatabaseManager] Failed to save meeting ${meeting.id}`, err);
             throw err;
         }
     }
@@ -298,7 +299,7 @@ export class DatabaseManager {
             const info = stmt.run(title, id);
             return info.changes > 0;
         } catch (error) {
-            console.error(`[DatabaseManager] Failed to update title for meeting ${id}:`, error);
+            log.error(`[DatabaseManager] Failed to update title for meeting ${id}:`, error);
             return false;
         }
     }
@@ -340,7 +341,7 @@ export class DatabaseManager {
             return info.changes > 0;
 
         } catch (error) {
-            console.error(`[DatabaseManager] Failed to update summary for meeting ${id}:`, error);
+            log.error(`[DatabaseManager] Failed to update summary for meeting ${id}:`, error);
             return false;
         }
     }
@@ -453,10 +454,10 @@ export class DatabaseManager {
         try {
             const stmt = this.db.prepare('DELETE FROM meetings WHERE id = ?');
             const info = stmt.run(id);
-            console.log(`[DatabaseManager] Deleted meeting ${id}. Changes: ${info.changes}`);
+            log.info(`[DatabaseManager] Deleted meeting ${id}. Changes: ${info.changes}`);
             return info.changes > 0;
         } catch (error) {
-            console.error(`[DatabaseManager] Failed to delete meeting ${id}:`, error);
+            log.error(`[DatabaseManager] Failed to delete meeting ${id}:`, error);
             return false;
         }
     }
@@ -509,10 +510,10 @@ export class DatabaseManager {
             this.db.exec('DELETE FROM transcripts');
             this.db.exec('DELETE FROM meetings');
 
-            console.log('[DatabaseManager] All data cleared from database.');
+            log.info('[DatabaseManager] All data cleared from database.');
             return true;
         } catch (error) {
-            console.error('[DatabaseManager] Failed to clear all data:', error);
+            log.error('[DatabaseManager] Failed to clear all data:', error);
             return false;
         }
     }
@@ -523,7 +524,7 @@ export class DatabaseManager {
         // Check if demo meeting already exists
         const existing = this.db.prepare('SELECT id FROM meetings WHERE id = ?').get('demo-meeting');
         if (existing) {
-            console.log('[DatabaseManager] Demo meeting already exists, skipping seed.');
+            log.info('[DatabaseManager] Demo meeting already exists, skipping seed.');
             return;
         }
 
@@ -698,6 +699,7 @@ natively.contact@gmail.com`;
         };
 
         this.saveMeeting(demoMeeting, today.getTime(), durationMs);
-        console.log('[DatabaseManager] Seeded demo meeting.');
+        log.info('[DatabaseManager] Seeded demo meeting.');
     }
 }
+

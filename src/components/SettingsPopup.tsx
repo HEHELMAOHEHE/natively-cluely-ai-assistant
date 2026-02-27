@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { MessageSquare, Link, Camera, Zap, Heart } from 'lucide-react';
 import { useShortcuts } from '../hooks/useShortcuts';
@@ -48,7 +49,7 @@ const SettingsPopup = () => {
                 // @ts-ignore
                 window.electronAPI?.invoke('set-groq-fast-text-mode', useGroqFastText);
             } catch (e) {
-                console.error(e);
+                log.error(e);
             }
             return;
         }
@@ -59,7 +60,7 @@ const SettingsPopup = () => {
             // @ts-ignore - electronAPI not typed in this file yet
             window.electronAPI?.invoke('set-groq-fast-text-mode', useGroqFastText);
         } catch (e) {
-            console.error(e);
+            log.error(e);
         }
     }, [useGroqFastText]);
 
@@ -95,7 +96,7 @@ const SettingsPopup = () => {
                         height: Math.ceil(rect.height)
                     });
                 } catch (e) {
-                    console.warn("Failed to update dimensions", e);
+                    log.warn("Failed to update dimensions", e);
                 }
             }
         });

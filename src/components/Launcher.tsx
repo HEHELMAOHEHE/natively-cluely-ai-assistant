@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect } from 'react';
 import { ToggleLeft, ToggleRight, Search, Zap, Calendar, ArrowRight, ArrowLeft, MoreHorizontal, Globe, Clock, ChevronRight, Settings, RefreshCw, Eye, EyeOff, Ghost, Plus, Mail, Link as LinkIcon, ChevronDown, Trash2, Bell, Check, Download } from 'lucide-react';
 import { generateMeetingPDF } from '../utils/pdfGenerator';
@@ -86,13 +87,13 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
 
     const fetchMeetings = () => {
         if (window.electronAPI && window.electronAPI.getRecentMeetings) {
-            window.electronAPI.getRecentMeetings().then(setMeetings).catch(err => console.error("Failed to fetch meetings:", err));
+            window.electronAPI.getRecentMeetings().then(setMeetings).catch(err => log.error("Failed to fetch meetings:", err));
         }
     };
 
     const fetchEvents = () => {
         if (window.electronAPI && window.electronAPI.getUpcomingEvents) {
-            window.electronAPI.getUpcomingEvents().then(setUpcomingEvents).catch(err => console.error("Failed to fetch events:", err));
+            window.electronAPI.getUpcomingEvents().then(setUpcomingEvents).catch(err => log.error("Failed to fetch events:", err));
         }
     }
 
@@ -109,10 +110,10 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
                     setShowNotification(false);
                 }, 3000);
             } else {
-                console.warn("electronAPI.calendarRefresh not found");
+                log.warn("electronAPI.calendarRefresh not found");
             }
         } catch (e) {
-            console.error("Refresh failed in handleRefresh:", e);
+            log.error("Refresh failed in handleRefresh:", e);
         } finally {
             // Ensure distinct feedback provided (min 500ms spin)
             setTimeout(() => setIsRefreshing(false), 500);
@@ -123,17 +124,17 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
     const { isShortcutPressed } = useShortcuts();
 
     useEffect(() => {
-        console.log("Launcher mounted");
+        log.info("Launcher mounted");
         // Seed demo data if needed (safe to call always)
         if (window.electronAPI && window.electronAPI.invoke) {
-            window.electronAPI.invoke('seed-demo').catch(err => console.error("Failed to seed demo:", err));
+            window.electronAPI.invoke('seed-demo').catch(err => log.error("Failed to seed demo:", err));
         }
 
         // Sync initial undetectable state
-        console.log('[Renderer] Launcher: Syncing initial state');
+        log.info('[Renderer] Launcher: Syncing initial state');
         if (window.electronAPI?.getUndetectable) {
             window.electronAPI.getUndetectable().then((undetectable) => {
-                console.log('[Renderer] Launcher: Got initial state:', undetectable);
+                log.info('[Renderer] Launcher: Got initial state:', undetectable);
                 setIsDetectable(!undetectable);
             });
         }
@@ -142,7 +143,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
         let removeUndetectableListener: (() => void) | undefined;
         if (window.electronAPI?.onUndetectableChanged) {
             removeUndetectableListener = window.electronAPI.onUndetectableChanged((undetectable) => {
-                console.log('[Renderer] Launcher: Received undetectable-changed:', undetectable);
+                log.info('[Renderer] Launcher: Received undetectable-changed:', undetectable);
                 setIsDetectable(!undetectable);
             });
         }
@@ -152,29 +153,19 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
 
         // Listen for background updates (e.g. after meeting processing finishes)
         const removeMeetingsListener = window.electronAPI.onMeetingsUpdated(() => {
-            console.log("Received meetings-updated event");
+            log.info("Received meetings-updated event");
             fetchMeetings();
         });
 
         // Simple polling for events every minute
         const interval = setInterval(fetchEvents, 60000);
 
-        // Global Keydown for Launcher-specific shortcuts (Cmd+B)
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (isShortcutPressed(e, 'toggleVisibility')) {
-                e.preventDefault();
-                window.electronAPI.toggleWindow();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-
         return () => {
             if (removeMeetingsListener) removeMeetingsListener();
             if (removeUndetectableListener) removeUndetectableListener();
             clearInterval(interval);
-            window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isShortcutPressed]);
+    }, []);
 
     // Filter next meeting (within 60 mins)
     const nextMeeting = upcomingEvents.find(e => {
@@ -202,7 +193,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
             });
             setIsPrepared(false);
         } catch (e) {
-            console.error("Failed to start prepared meeting", e);
+            log.error("Failed to start prepared meeting", e);
         }
     };
 
@@ -212,7 +203,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
 
     const toggleDetectable = () => {
         const newState = !isDetectable;
-        console.log('[Renderer] Launcher onClick - toggling to:', !newState);
+        log.info('[Renderer] Launcher onClick - toggling to:', !newState);
         setIsDetectable(newState);
         // Call setUndetectable only on user action - not on state change from main process
         window.electronAPI?.setUndetectable?.(!newState);
@@ -262,26 +253,26 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
 
     const handleOpenMeeting = async (meeting: Meeting) => {
         setForwardMeeting(null); // Clear forward history on new navigation
-        console.log("[Launcher] Opening meeting:", meeting.id);
+        log.info("[Launcher] Opening meeting:", meeting.id);
         analytics.trackCommandExecuted('open_meeting_details');
 
         // Fetch full meeting details including transcript and usage
         if (window.electronAPI && window.electronAPI.getMeetingDetails) {
             try {
-                console.log("[Launcher] Fetching full meeting details...");
+                log.info("[Launcher] Fetching full meeting details...");
                 const fullMeeting = await window.electronAPI.getMeetingDetails(meeting.id);
-                console.log("[Launcher] Got meeting details:", fullMeeting);
-                console.log("[Launcher] Transcript count:", fullMeeting?.transcript?.length);
-                console.log("[Launcher] Usage count:", fullMeeting?.usage?.length);
+                log.info("[Launcher] Got meeting details:", fullMeeting);
+                log.info("[Launcher] Transcript count:", fullMeeting?.transcript?.length);
+                log.info("[Launcher] Usage count:", fullMeeting?.usage?.length);
                 if (fullMeeting) {
                     setSelectedMeeting(fullMeeting);
                     return;
                 }
             } catch (err) {
-                console.error("[Launcher] Failed to fetch meeting details:", err);
+                log.error("[Launcher] Failed to fetch meeting details:", err);
             }
         } else {
-            console.warn("[Launcher] getMeetingDetails not available on electronAPI");
+            log.warn("[Launcher] getMeetingDetails not available on electronAPI");
         }
         // Fallback to list-view data if fetch fails
         setSelectedMeeting(meeting);
@@ -738,7 +729,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings }) =
                                                                                                 generateMeetingPDF(m);
                                                                                             }
                                                                                         } catch (e) {
-                                                                                            console.error("Failed to fetch details for PDF", e);
+                                                                                            log.error("Failed to fetch details for PDF", e);
                                                                                             generateMeetingPDF(m);
                                                                                         }
                                                                                     } else {

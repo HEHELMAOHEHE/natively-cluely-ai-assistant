@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -83,7 +84,7 @@ const AssistantMessage: React.FC<{ content: string; isStreaming?: boolean }> = (
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
-            console.error('Failed to copy:', err);
+            log.error('Failed to copy:', err);
         }
     };
 
@@ -268,7 +269,7 @@ const MeetingChatOverlay: React.FC<MeetingChatOverlayProps> = ({
             });
 
             const errorCleanup = window.electronAPI?.onRAGStreamError((data: { error: string }) => {
-                console.error('[MeetingChat] RAG stream error:', data.error);
+                log.error('[MeetingChat] RAG stream error:', data.error);
                 setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
                 setErrorMessage("Couldn't get a response. Please try again.");
                 setChatState('error');
@@ -286,7 +287,7 @@ const MeetingChatOverlay: React.FC<MeetingChatOverlayProps> = ({
 
                 // If RAG not available (or failed), fall back to context-window chat
                 if (result?.fallback) {
-                    console.log("[MeetingChat] RAG unavailable, using context window fallback");
+                    log.info("[MeetingChat] RAG unavailable, using context window fallback");
                     // Cleanup RAG listeners since we won't use them
                     tokenCleanup?.();
                     doneCleanup?.();
@@ -319,7 +320,7 @@ ${contextString}`;
                     });
 
                     const oldErrorCleanup = window.electronAPI?.onGeminiStreamError((error: string) => {
-                        console.error('[MeetingChat] Gemini stream error (fallback):', error);
+                        log.error('[MeetingChat] Gemini stream error (fallback):', error);
                         setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
                         setErrorMessage("Couldn't get a response. Please check your settings.");
                         setChatState('error');
@@ -365,7 +366,7 @@ ${contextString}`;
                 });
 
                 const oldErrorCleanup = window.electronAPI?.onGeminiStreamError((error: string) => {
-                    console.error('[MeetingChat] Gemini stream error:', error);
+                    log.error('[MeetingChat] Gemini stream error:', error);
                     setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
                     setErrorMessage("Couldn't get a response. Please check your settings.");
                     setChatState('error');
@@ -383,7 +384,7 @@ ${contextString}`;
             }
 
         } catch (error) {
-            console.error('[MeetingChat] Error:', error);
+            log.error('[MeetingChat] Error:', error);
             setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
             setErrorMessage("Something went wrong. Please try again.");
             setChatState('error');

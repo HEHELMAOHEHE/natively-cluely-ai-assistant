@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { app, safeStorage, shell, net } from 'electron';
 import axios from 'axios';
 import http from 'http';
@@ -15,7 +16,7 @@ const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
 const TOKEN_PATH = path.join(app.getPath('userData'), 'calendar_tokens.enc');
 
 if (GOOGLE_CLIENT_ID === "YOUR_CLIENT_ID_HERE" || GOOGLE_CLIENT_SECRET === "YOUR_CLIENT_SECRET_HERE") {
-    console.warn('[CalendarManager] Google OAuth credentials are using defaults. Calendar features will not work until valid credentials are provided via env vars.');
+    log.warn('[CalendarManager] Google OAuth credentials are using defaults. Calendar features will not work until valid credentials are provided via env vars.');
 }
 
 export interface CalendarEvent {
@@ -143,7 +144,7 @@ export class CalendarManager extends EventEmitter {
 
             this.handleTokenResponse(response.data);
         } catch (error) {
-            console.error('[CalendarManager] Token exchange failed:', error);
+            log.error('[CalendarManager] Token exchange failed:', error);
             throw error;
         }
     }
@@ -153,7 +154,7 @@ export class CalendarManager extends EventEmitter {
     // =========================================================================
 
     public async refreshState(): Promise<void> {
-        console.log('[CalendarManager] Refreshing state (Reality Reconciliation)...');
+        log.info('[CalendarManager] Refreshing state (Reality Reconciliation)...');
 
         // 1. Reset Soft Heuristics
         // Clear existing reminder timeouts to prevent double scheduling or stale alerts
@@ -165,7 +166,7 @@ export class CalendarManager extends EventEmitter {
             // Force fetch will also re-schedule reminders based on NEW time
             await this.getUpcomingEvents(true);
         } else {
-            console.log('[CalendarManager] Calendar not connected, skipping fetch.');
+            log.info('[CalendarManager] Calendar not connected, skipping fetch.');
         }
 
         // 3. Emit update to UI
@@ -203,7 +204,7 @@ export class CalendarManager extends EventEmitter {
 
             this.handleTokenResponse(response.data);
         } catch (error) {
-            console.error('[CalendarManager] Token refresh failed:', error);
+            log.error('[CalendarManager] Token refresh failed:', error);
             // If refresh fails (e.g. revoked), disconnect
             this.disconnect();
         }
@@ -215,7 +216,7 @@ export class CalendarManager extends EventEmitter {
 
     private saveTokens() {
         if (!safeStorage.isEncryptionAvailable()) {
-            console.warn('[CalendarManager] Encryption not available, skipping token save');
+            log.warn('[CalendarManager] Encryption not available, skipping token save');
             return;
         }
 
@@ -251,7 +252,7 @@ export class CalendarManager extends EventEmitter {
                 }
             }
         } catch (error) {
-            console.error('[CalendarManager] Failed to load tokens:', error);
+            log.error('[CalendarManager] Failed to load tokens:', error);
         }
     }
 
@@ -377,7 +378,7 @@ export class CalendarManager extends EventEmitter {
                 }));
 
         } catch (error) {
-            console.error('[CalendarManager] Failed to fetch events:', error);
+            log.error('[CalendarManager] Failed to fetch events:', error);
             return [];
         }
     }
@@ -419,3 +420,4 @@ export class CalendarManager extends EventEmitter {
         return this.getUpcomingEvents();
     }
 }
+

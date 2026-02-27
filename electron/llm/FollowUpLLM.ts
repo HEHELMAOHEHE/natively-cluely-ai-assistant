@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { LLMHelper } from "../LLMHelper";
 import { UNIVERSAL_FOLLOWUP_PROMPT } from "./prompts";
 
@@ -16,7 +17,7 @@ export class FollowUpLLM {
             for await (const chunk of stream) full += chunk;
             return full;
         } catch (e) {
-            console.error("[FollowUpLLM] Failed:", e);
+            log.error("[FollowUpLLM] Failed:", e);
             return "";
         }
     }
@@ -26,7 +27,8 @@ export class FollowUpLLM {
             const message = `PREVIOUS ANSWER:\n${previousAnswer}\n\nREQUEST: ${refinementRequest}`;
             yield* this.llmHelper.streamChat(message, undefined, context, UNIVERSAL_FOLLOWUP_PROMPT);
         } catch (e) {
-            console.error("[FollowUpLLM] Stream Failed:", e);
+            log.error("[FollowUpLLM] Stream Failed:", e);
         }
     }
 }
+

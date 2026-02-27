@@ -15,6 +15,7 @@ export class ModelSelectorWindowHelper {
     // Store offsets relative to main window if needed, but absolute positioning is simpler for dropdowns
     private lastBlurTime: number = 0
     private ignoreBlur: boolean = false;
+    private contentProtection: boolean = false; // Track state
 
     constructor() { }
 
@@ -22,6 +23,13 @@ export class ModelSelectorWindowHelper {
 
     public setWindowHelper(wh: WindowHelper): void {
         this.windowHelper = wh;
+    }
+
+    public setContentProtection(enable: boolean): void {
+        this.contentProtection = enable;
+        if (this.window && !this.window.isDestroyed()) {
+            this.window.setContentProtection(enable);
+        }
     }
 
     public getWindow(): BrowserWindow | null {
@@ -60,6 +68,10 @@ export class ModelSelectorWindowHelper {
         this.window.setPosition(Math.round(x), Math.round(y))
 
         this.ensureVisibleOnScreen();
+        // Apply content protection BEFORE showing window
+        if (this.contentProtection) {
+            this.window.setContentProtection(true);
+        }
         this.window.show()
         this.window.focus()
     }
@@ -140,6 +152,10 @@ export class ModelSelectorWindowHelper {
 
         this.window.once('ready-to-show', () => {
             if (showWhenReady) {
+                // Apply content protection BEFORE showing window
+                if (this.contentProtection) {
+                    this.window?.setContentProtection(true);
+                }
                 this.window?.show()
             }
         })

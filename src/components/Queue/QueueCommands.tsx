@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef } from "react"
 import { IoLogOutOutline } from "react-icons/io5"
 import { Dialog, DialogContent, DialogClose } from "../ui/dialog"
@@ -40,47 +41,47 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
 
     // Check initial status
     window.electronAPI.getNativeAudioStatus().then((status) => {
-      console.log('[QueueCommands] Initial audio status:', status)
+      log.info('[QueueCommands] Initial audio status:', status)
       setIsNativeAudioConnected(status.connected)
       if (status.connected) {
         setAudioResult('🎤 Connected to native audio service')
       }
-    }).catch(err => console.error('Failed to get audio status:', err))
+    }).catch(err => log.error('Failed to get audio status:', err))
 
     // Connection status
     cleanupFns.push(window.electronAPI.onNativeAudioConnected(() => {
-      console.log('[QueueCommands] Native audio connected')
+      log.info('[QueueCommands] Native audio connected')
       setIsNativeAudioConnected(true)
       setAudioResult('🎤 Connected to native audio service')
     }))
 
     cleanupFns.push(window.electronAPI.onNativeAudioDisconnected(() => {
-      console.log('[QueueCommands] Native audio disconnected')
+      log.info('[QueueCommands] Native audio disconnected')
       setIsNativeAudioConnected(false)
       setAudioResult('⚠️ Disconnected from native audio service')
     }))
 
     // Transcript updates
     cleanupFns.push(window.electronAPI.onNativeAudioTranscript((transcript) => {
-      console.log('[QueueCommands] Transcript:', transcript)
+      log.info('[QueueCommands] Transcript:', transcript)
       setTranscripts(prev => [...prev.slice(-10), transcript]) // Keep last 10
       setAudioResult(`[${transcript.speaker}] ${transcript.text}`)
     }))
 
     // Suggestion events
     cleanupFns.push(window.electronAPI.onSuggestionProcessingStart(() => {
-      console.log('[QueueCommands] Generating suggestion...')
+      log.info('[QueueCommands] Generating suggestion...')
       setIsSuggestionLoading(true)
     }))
 
     cleanupFns.push(window.electronAPI.onSuggestionGenerated((data) => {
-      console.log('[QueueCommands] Suggestion received:', data)
+      log.info('[QueueCommands] Suggestion received:', data)
       setIsSuggestionLoading(false)
       setLatestSuggestion(data.suggestion)
     }))
 
     cleanupFns.push(window.electronAPI.onSuggestionError((error) => {
-      console.error('[QueueCommands] Suggestion error:', error)
+      log.error('[QueueCommands] Suggestion error:', error)
       setIsSuggestionLoading(false)
       setLatestSuggestion(`Error: ${error.error}`)
     }))

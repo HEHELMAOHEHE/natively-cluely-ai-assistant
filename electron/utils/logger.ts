@@ -9,8 +9,13 @@ const isDev = process.env.NODE_ENV === "development";
  */
 export function initializeLogger(): void {
   // --- File logging ---
-  log.transports.file.resolvePathFn = () =>
-    path.join(app.getPath("documents"), "natively_debug.log");
+  log.transports.file.resolvePathFn = () => {
+    try {
+      return path.join(app?.getPath?.("documents") || process.cwd(), "natively_debug.log");
+    } catch {
+      return path.join(process.cwd(), "natively_debug.log");
+    }
+  };
   log.transports.file.level = isDev ? "debug" : "info";
   log.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}";
 

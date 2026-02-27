@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 // ProcessingHelper.ts
 
 import { AppState } from "./main"
@@ -29,7 +30,7 @@ export class ProcessingHelper {
     const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434"
 
     if (useOllama) {
-      // console.log("[ProcessingHelper] Initializing with Ollama")
+      // log.info("[ProcessingHelper] Initializing with Ollama")
       this.llmHelper = new LLMHelper(undefined, true, ollamaModel, ollamaUrl)
     } else {
       // Try environment first (for development)
@@ -40,7 +41,7 @@ export class ProcessingHelper {
 
       // Allow initializing without key (will be loaded in loadStoredCredentials or via Settings)
       if (!apiKey) {
-        console.warn("[ProcessingHelper] GEMINI_API_KEY not found in env. Will try CredentialsManager after ready.")
+        log.warn("[ProcessingHelper] GEMINI_API_KEY not found in env. Will try CredentialsManager after ready.")
       }
 
       this.llmHelper = new LLMHelper(apiKey, false, undefined, undefined, groqApiKey, openaiApiKey, claudeApiKey)
@@ -60,22 +61,22 @@ export class ProcessingHelper {
     const claudeKey = credManager.getClaudeApiKey();
 
     if (geminiKey) {
-      console.log("[ProcessingHelper] Loading stored Gemini API Key from CredentialsManager");
+      log.info("[ProcessingHelper] Loading stored Gemini API Key from CredentialsManager");
       this.llmHelper.setApiKey(geminiKey);
     }
 
     if (groqKey) {
-      console.log("[ProcessingHelper] Loading stored Groq API Key from CredentialsManager");
+      log.info("[ProcessingHelper] Loading stored Groq API Key from CredentialsManager");
       this.llmHelper.setGroqApiKey(groqKey);
     }
 
     if (openaiKey) {
-      console.log("[ProcessingHelper] Loading stored OpenAI API Key from CredentialsManager");
+      log.info("[ProcessingHelper] Loading stored OpenAI API Key from CredentialsManager");
       this.llmHelper.setOpenaiApiKey(openaiKey);
     }
 
     if (claudeKey) {
-      console.log("[ProcessingHelper] Loading stored Claude API Key from CredentialsManager");
+      log.info("[ProcessingHelper] Loading stored Claude API Key from CredentialsManager");
       this.llmHelper.setClaudeApiKey(claudeKey);
     }
 
@@ -87,16 +88,16 @@ export class ProcessingHelper {
     // This fixes "RAG unavailable" in production where process.env is empty
     const ragManager = this.appState.getRAGManager();
     if (ragManager && geminiKey) {
-      console.log("[ProcessingHelper] Initializing RAGManager embeddings with loaded key");
+      log.info("[ProcessingHelper] Initializing RAGManager embeddings with loaded key");
       ragManager.initializeEmbeddings(geminiKey);
 
       // CRITICAL: Retry pending embeddings now that we have a key
       // This ensures any meetings that failed or were queued during startup get processed
-      console.log("[ProcessingHelper] Retrying pending embeddings...");
-      ragManager.retryPendingEmbeddings().catch(console.error);
+      log.info("[ProcessingHelper] Retrying pending embeddings...");
+      ragManager.retryPendingEmbeddings().catch(log.error);
 
       // CRITICAL: Ensure demo meeting has chunks
-      ragManager.ensureDemoMeetingProcessed().catch(console.error);
+      ragManager.ensureDemoMeetingProcessed().catch(log.error);
 
       // CRITICAL: Cleanup stale queue items to prevent "Chunk not found" errors
       ragManager.cleanupStaleQueueItems();
@@ -105,7 +106,7 @@ export class ProcessingHelper {
     // NEW: Load Default Model Config
     const defaultModel = credManager.getDefaultModel();
     if (defaultModel) {
-      console.log(`[ProcessingHelper] Loading stored Default Model: ${defaultModel}`);
+      log.info(`[ProcessingHelper] Loading stored Default Model: ${defaultModel}`);
       const customProviders = credManager.getCustomProviders();
       const curlProviders = credManager.getCurlProviders();
       const allProviders = [...(customProviders || []), ...(curlProviders || [])];
@@ -149,7 +150,7 @@ export class ProcessingHelper {
         mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.PROBLEM_EXTRACTED, problemInfo);
         this.appState.setProblemInfo(problemInfo);
       } catch (error: any) {
-        // console.error("Image processing error:", error)
+        // log.error("Image processing error:", error)
         mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR, error.message)
       } finally {
         this.currentProcessingAbortController = null
@@ -159,7 +160,7 @@ export class ProcessingHelper {
       // Debug mode
       const extraScreenshotQueue = this.appState.getScreenshotHelper().getExtraScreenshotQueue()
       if (extraScreenshotQueue.length === 0) {
-        // console.log("No extra screenshots to process")
+        // log.info("No extra screenshots to process")
         mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.NO_SCREENSHOTS)
         return
       }
@@ -192,7 +193,7 @@ export class ProcessingHelper {
         )
 
       } catch (error: any) {
-        // console.error("Debug processing error:", error)
+        // log.error("Debug processing error:", error)
         mainWindow.webContents.send(
           this.appState.PROCESSING_EVENTS.DEBUG_ERROR,
           error.message
@@ -223,3 +224,4 @@ export class ProcessingHelper {
     return this.llmHelper;
   }
 }
+

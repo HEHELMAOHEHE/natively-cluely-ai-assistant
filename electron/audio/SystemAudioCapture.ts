@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { EventEmitter } from 'events';
 import { app } from 'electron';
 import path from 'path';
@@ -7,7 +8,7 @@ let NativeModule: any = null;
 try {
     NativeModule = require('natively-audio');
 } catch (e) {
-    console.error('[SystemAudioCapture] Failed to load native module:', e);
+    log.error('[SystemAudioCapture] Failed to load native module:', e);
 }
 
 const { SystemAudioCapture: RustAudioCapture } = NativeModule || {};
@@ -22,11 +23,11 @@ export class SystemAudioCapture extends EventEmitter {
         super();
         this.deviceId = deviceId || null;
         if (!RustAudioCapture) {
-            console.error('[SystemAudioCapture] Rust class implementation not found.');
+            log.error('[SystemAudioCapture] Rust class implementation not found.');
         } else {
             // LAZY INIT: Don't create native monitor here - it causes 1-second audio mute + quality drop
             // The monitor will be created in start() when the meeting actually begins
-            console.log(`[SystemAudioCapture] Initialized (lazy). Device ID: ${this.deviceId || 'default'}`);
+            log.info(`[SystemAudioCapture] Initialized (lazy). Device ID: ${this.deviceId || 'default'}`);
         }
     }
 
@@ -43,25 +44,25 @@ export class SystemAudioCapture extends EventEmitter {
         if (this.isRecording) return;
 
         if (!RustAudioCapture) {
-            console.error('[SystemAudioCapture] Cannot start: Rust module missing');
+            log.error('[SystemAudioCapture] Cannot start: Rust module missing');
             return;
         }
 
         // LAZY INIT: Create monitor here when meeting starts (not in constructor)
         // This prevents the 1-second audio mute + quality drop at app launch
         if (!this.monitor) {
-            console.log('[SystemAudioCapture] Creating native monitor (lazy init)...');
+            log.info('[SystemAudioCapture] Creating native monitor (lazy init)...');
             try {
                 this.monitor = new RustAudioCapture(this.deviceId);
             } catch (e) {
-                console.error('[SystemAudioCapture] Failed to create native monitor:', e);
+                log.error('[SystemAudioCapture] Failed to create native monitor:', e);
                 this.emit('error', e);
                 return;
             }
         }
 
         try {
-            console.log('[SystemAudioCapture] Starting native capture...');
+            log.info('[SystemAudioCapture] Starting native capture...');
 
             this.monitor.start((chunk: Uint8Array) => {
                 // The native module sends raw PCM bytes (Uint8Array)
@@ -69,7 +70,7 @@ export class SystemAudioCapture extends EventEmitter {
                     const buffer = Buffer.from(chunk);
                     if (Math.random() < 0.05) {
                         const prefix = buffer.slice(0, 10).toString('hex');
-                        console.log(`[SystemAudioCapture] Chunk: ${buffer.length}b, Rate: ${this.detectedSampleRate}, Data(hex): ${prefix}...`);
+                        log.info(`[SystemAudioCapture] Chunk: ${buffer.length}b, Rate: ${this.detectedSampleRate}, Data(hex): ${prefix}...`);
                     }
                     this.emit('data', buffer);
                 }
@@ -78,7 +79,7 @@ export class SystemAudioCapture extends EventEmitter {
             this.isRecording = true;
             this.emit('start');
         } catch (error) {
-            console.error('[SystemAudioCapture] Failed to start:', error);
+            log.error('[SystemAudioCapture] Failed to start:', error);
             this.emit('error', error);
         }
     }
@@ -89,11 +90,11 @@ export class SystemAudioCapture extends EventEmitter {
     public stop(): void {
         if (!this.isRecording) return;
 
-        console.log('[SystemAudioCapture] Stopping capture...');
+        log.info('[SystemAudioCapture] Stopping capture...');
         try {
             this.monitor?.stop();
         } catch (e) {
-            console.error('[SystemAudioCapture] Error stopping:', e);
+            log.error('[SystemAudioCapture] Error stopping:', e);
         }
 
         // Destroy monitor
@@ -102,3 +103,4 @@ export class SystemAudioCapture extends EventEmitter {
         this.emit('stop');
     }
 }
+

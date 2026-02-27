@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useEffect, useState } from 'react';
 import UpdateModal from './UpdateModal';
 
@@ -11,7 +12,7 @@ const UpdateBanner: React.FC = () => {
     useEffect(() => {
         // Listen for update available
         const unsubAvailable = window.electronAPI.onUpdateAvailable((info: any) => {
-            console.log('[UpdateBanner] Update available:', info);
+            log.info('[UpdateBanner] Update available:', info);
             setUpdateInfo(info);
             // If parsed notes are included in the info object (from our backend change)
             if (info.parsedNotes) {
@@ -30,7 +31,7 @@ const UpdateBanner: React.FC = () => {
 
         // Listen for update-downloaded event
         const unsubDownloaded = window.electronAPI.onUpdateDownloaded((info) => {
-            console.log('[UpdateBanner] Update downloaded:', info);
+            log.info('[UpdateBanner] Update downloaded:', info);
             setUpdateInfo(info); // Update info again just in case
             if (info.parsedNotes) setParsedNotes(info.parsedNotes);
 
@@ -53,18 +54,18 @@ const UpdateBanner: React.FC = () => {
             // Checking: metaKey + i (case insensitive)
             if (e.metaKey && !e.shiftKey && e.key.toLowerCase() === 'i') {
                 e.preventDefault();
-                console.log("[UpdateBanner] Cmd+I pressed: Triggering Test Release Fetch...");
+                log.info("[UpdateBanner] Cmd+I pressed: Triggering Test Release Fetch...");
 
                 // Call the new test method
                 window.electronAPI.testReleaseFetch()
                     .then((result: { success: boolean; error?: string }) => {
                         if (result.success) {
-                            console.log("[UpdateBanner] Test fetch successful");
+                            log.info("[UpdateBanner] Test fetch successful");
                         } else {
-                            console.error("[UpdateBanner] Test fetch failed:", result.error);
+                            log.error("[UpdateBanner] Test fetch failed:", result.error);
                         }
                     })
-                    .catch((err: any) => console.error("[UpdateBanner] Test fetch error:", err));
+                    .catch((err: any) => log.error("[UpdateBanner] Test fetch error:", err));
             }
         };
         window.addEventListener('keydown', handleKeyDown);

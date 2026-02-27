@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState } from 'react';
 import { ArrowLeft, Search, Mail, Link, ChevronDown, Play, ArrowUp, Copy, Check, MoreHorizontal, Settings, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -113,7 +114,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
             setIsCopied(true);
             setTimeout(() => setIsCopied(false), 2000);
         } catch (err) {
-            console.error('Failed to copy content:', err);
+            log.error('Failed to copy content:', err);
         }
     };
 
@@ -366,13 +367,13 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                             <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                                 <div className="space-y-6">
                                     {(() => {
-                                        console.log('Raw Transcript:', meeting.transcript);
+                                        log.info('Raw Transcript:', meeting.transcript);
                                         const filteredTranscript = meeting.transcript?.filter(entry => {
                                             const isHidden = ['system', 'ai', 'assistant', 'model'].includes(entry.speaker?.toLowerCase());
-                                            if (isHidden) console.log('Filtered out:', entry);
+                                            if (isHidden) log.info('Filtered out:', entry);
                                             return !isHidden;
                                         }) || [];
-                                        console.log('Filtered Transcript:', filteredTranscript);
+                                        log.info('Filtered Transcript:', filteredTranscript);
 
                                         if (filteredTranscript.length === 0) {
                                             return <p className="text-text-tertiary">No transcript available.</p>;

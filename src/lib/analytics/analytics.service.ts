@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 // GA4 Analytics via manual gtag.js injection
 // Works in Electron by dynamically loading the gtag script into the renderer DOM
 // Only requires the public Measurement ID — no API secrets needed
@@ -122,14 +123,14 @@ class AnalyticsService {
             script.async = true;
             script.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_MEASUREMENT_ID}`;
             script.onerror = () => {
-                console.warn("[Analytics] Failed to load gtag.js — analytics disabled.");
+                log.warn("[Analytics] Failed to load gtag.js — analytics disabled.");
             };
             document.head.appendChild(script);
 
             this.initialized = true;
-            console.log(`[Analytics] Initialized (v${APP_VERSION}) via gtag.js injection.`);
+            log.info(`[Analytics] Initialized (v${APP_VERSION}) via gtag.js injection.`);
         } catch (error) {
-            console.warn("[Analytics] Initialization failed:", error);
+            log.warn("[Analytics] Initialization failed:", error);
         }
     }
 
@@ -240,7 +241,7 @@ class AnalyticsService {
 
     private trackEvent(eventName: AnalyticsEventName, payload?: Record<string, any>): void {
         if (import.meta.env.DEV) {
-            console.log(`[Analytics] ${eventName}`, payload);
+            log.info(`[Analytics] ${eventName}`, payload);
         }
 
         try {
@@ -251,7 +252,7 @@ class AnalyticsService {
                 });
             }
         } catch (error) {
-            console.warn("[Analytics] Failed to send event:", error);
+            log.warn("[Analytics] Failed to send event:", error);
         }
     }
 }

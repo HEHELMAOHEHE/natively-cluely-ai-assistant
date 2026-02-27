@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,7 +33,7 @@ export const SupportToaster: React.FC<SupportToasterProps> = ({ className }) => 
                     }
                 }
             } catch (e) {
-                console.error("Failed to check donation status:", e);
+                log.error("Failed to check donation status:", e);
             }
         };
 
@@ -46,7 +47,7 @@ export const SupportToaster: React.FC<SupportToasterProps> = ({ className }) => 
             if (!import.meta.env.DEV) return;
             if ((e.metaKey || e.ctrlKey) && e.key === 's') {
                 e.preventDefault();
-                console.log("Debug: Toggling Donation Toaster");
+                log.info("Debug: Toggling Donation Toaster");
                 setIsVisible(prev => !prev);
             }
         };
@@ -62,7 +63,7 @@ export const SupportToaster: React.FC<SupportToasterProps> = ({ className }) => 
             if (clickTimeRef.current) {
                 const elapsed = Date.now() - clickTimeRef.current;
                 if (elapsed > 20000) { // 20 seconds
-                    console.log("User returned from support link after >20s. Presuming donation.");
+                    log.info("User returned from support link after >20s. Presuming donation.");
                     await window.electronAPI?.setDonationComplete();
                     setHasDonated(true);
                     setIsVisible(false);

@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 // electron/llm/AssistLLM.ts
 // MODE: Assist - Passive observation (low priority)
 // Provides brief observational insights, NEVER suggests what to say
@@ -36,8 +37,9 @@ export class AssistLLM {
             );
 
         } catch (error) {
-            console.error("[AssistLLM] Generation failed:", error);
+            log.error("[AssistLLM] Generation failed:", error);
             return "";
         }
     }
 }
+

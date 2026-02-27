@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { EventEmitter } from 'events';
 import { app } from 'electron';
 import path from 'path';
@@ -8,7 +9,7 @@ let NativeModule: any = null;
 try {
     NativeModule = require('natively-audio');
 } catch (e) {
-    console.error('[MicrophoneCapture] Failed to load native module:', e);
+    log.error('[MicrophoneCapture] Failed to load native module:', e);
 }
 
 const { MicrophoneCapture: RustMicCapture } = NativeModule || {};
@@ -22,14 +23,14 @@ export class MicrophoneCapture extends EventEmitter {
         super();
         this.deviceId = deviceId || null;
         if (!RustMicCapture) {
-            console.error('[MicrophoneCapture] Rust class implementation not found.');
+            log.error('[MicrophoneCapture] Rust class implementation not found.');
         } else {
-            console.log(`[MicrophoneCapture] Initialized wrapper. Device ID: ${this.deviceId || 'default'}`);
+            log.info(`[MicrophoneCapture] Initialized wrapper. Device ID: ${this.deviceId || 'default'}`);
             try {
-                console.log('[MicrophoneCapture] Creating native monitor (Eager Init)...');
+                log.info('[MicrophoneCapture] Creating native monitor (Eager Init)...');
                 this.monitor = new RustMicCapture(this.deviceId);
             } catch (e) {
-                console.error('[MicrophoneCapture] Failed to create native monitor:', e);
+                log.error('[MicrophoneCapture] Failed to create native monitor:', e);
                 // We don't throw here to allow app to start, but start() will fail
             }
         }
@@ -47,14 +48,14 @@ export class MicrophoneCapture extends EventEmitter {
         if (this.isRecording) return;
 
         if (!RustMicCapture) {
-            console.error('[MicrophoneCapture] Cannot start: Rust module missing');
+            log.error('[MicrophoneCapture] Cannot start: Rust module missing');
             return;
         }
 
         // Monitor should be ready from constructor
         // Monitor should be ready from constructor
         if (!this.monitor) {
-            console.log('[MicrophoneCapture] Monitor not initialized. Re-initializing...');
+            log.info('[MicrophoneCapture] Monitor not initialized. Re-initializing...');
             try {
                 this.monitor = new RustMicCapture(this.deviceId);
             } catch (e) {
@@ -64,13 +65,13 @@ export class MicrophoneCapture extends EventEmitter {
         }
 
         try {
-            console.log('[MicrophoneCapture] Starting native capture...');
+            log.info('[MicrophoneCapture] Starting native capture...');
 
             this.monitor.start((chunk: Uint8Array) => {
                 if (chunk && chunk.length > 0) {
                     // Debug: log occasionally
                     if (Math.random() < 0.05) {
-                        console.log(`[MicrophoneCapture] Emitting chunk: ${chunk.length} bytes to JS`);
+                        log.info(`[MicrophoneCapture] Emitting chunk: ${chunk.length} bytes to JS`);
                     }
                     this.emit('data', Buffer.from(chunk));
                 }
@@ -79,7 +80,7 @@ export class MicrophoneCapture extends EventEmitter {
             this.isRecording = true;
             this.emit('start');
         } catch (error) {
-            console.error('[MicrophoneCapture] Failed to start:', error);
+            log.error('[MicrophoneCapture] Failed to start:', error);
             this.emit('error', error);
         }
     }
@@ -90,11 +91,11 @@ export class MicrophoneCapture extends EventEmitter {
     public stop(): void {
         if (!this.isRecording) return;
 
-        console.log('[MicrophoneCapture] Stopping capture...');
+        log.info('[MicrophoneCapture] Stopping capture...');
         try {
             this.monitor?.stop();
         } catch (e) {
-            console.error('[MicrophoneCapture] Error stopping:', e);
+            log.error('[MicrophoneCapture] Error stopping:', e);
         }
 
         // DO NOT destroy monitor here. Keep it alive for seamless restart.
@@ -109,3 +110,4 @@ export class MicrophoneCapture extends EventEmitter {
         this.monitor = null;
     }
 }
+

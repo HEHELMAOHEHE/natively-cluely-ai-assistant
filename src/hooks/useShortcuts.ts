@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { acceleratorToKeys, keysToAccelerator } from '../utils/keyboardUtils';
 
@@ -86,7 +87,7 @@ export const useShortcuts = () => {
                 const keybinds = await window.electronAPI.getKeybinds();
                 mapBackendToFrontend(keybinds);
             } catch (error) {
-                console.error('Failed to fetch keybinds:', error);
+                log.error('Failed to fetch keybinds:', error);
             }
         };
 
@@ -136,7 +137,7 @@ export const useShortcuts = () => {
                     mapBackendToFrontend(latest);
                 }
             } catch (error) {
-                console.error(`Failed to set keybind for ${actionId}:`, error);
+                log.error(`Failed to set keybind for ${actionId}:`, error);
                 // Revert optimistic update if needed? For now, we rely on the next update from backend or refresh.
             }
         }
@@ -148,7 +149,7 @@ export const useShortcuts = () => {
             const defaults = await window.electronAPI.resetKeybinds();
             mapBackendToFrontend(defaults);
         } catch (error) {
-            console.error('Failed to reset keybinds:', error);
+            log.error('Failed to reset keybinds:', error);
         }
     }, [mapBackendToFrontend]);
 

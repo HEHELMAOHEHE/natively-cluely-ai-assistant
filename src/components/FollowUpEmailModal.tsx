@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Mail, RotateCcw, ExternalLink, Loader2, Paperclip } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -79,7 +80,7 @@ const FollowUpEmailModal: React.FC<FollowUpEmailModalProps> = ({ isOpen, onClose
                 }
             }
         } catch (e) {
-            console.error(e);
+            log.error(e);
         }
 
         if (loadedRecipientEmail) setRecipientEmail(loadedRecipientEmail);
@@ -111,7 +112,7 @@ const FollowUpEmailModal: React.FC<FollowUpEmailModalProps> = ({ isOpen, onClose
                 setEmailBody(generatedBody);
             }
         } catch (error) {
-            console.error('Failed to generate email:', error);
+            log.error('Failed to generate email:', error);
             setEmailBody('Hi there,\n\nI enjoyed our conversation. Let me know if you have any questions.\n\nBest,');
         } finally {
             setIsGenerating(false);

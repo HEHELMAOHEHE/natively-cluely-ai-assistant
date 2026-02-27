@@ -14,13 +14,20 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
-
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],               // фронтенд
-      "@electron/*": ["electron/*"]   // main-процесс
+      "@/*": ["src/*"],                       // фронтенд
+      "@electron/*": ["electron/*"],          // основной процесс
+      "@llm/*": ["electron/llm/*"],
+      "@services/*": ["electron/services/*"],
+      "@utils/logger": ["electron/utils/logger.ts"], // logger конкретно
+      "@rag/*": ["electron/rag/*"],
+      "@audio/*": ["electron/audio/*"],
+      "@db/*": ["electron/db/*"],
+      "@update/*": ["electron/update/*"],
+      "@config/*": ["electron/config/*"]
     }
   },
-  "include": ["src", "electron"],      // теперь видит оба
+  "include": ["src", "electron"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

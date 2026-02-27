@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 
@@ -65,7 +66,7 @@ const ModelSelectorWindow = () => {
                             // @ts-ignore
                             oModels = await window.electronAPI?.invoke('get-available-ollama-models');
                         } catch (e) {
-                            console.warn("Retrying Ollama failed", e);
+                            log.warn("Retrying Ollama failed", e);
                         }
                     }
 
@@ -114,7 +115,7 @@ const ModelSelectorWindow = () => {
                 }
 
             } catch (err) {
-                console.error("Failed to load models:", err);
+                log.error("Failed to load models:", err);
             } finally {
                 setIsLoading(false);
             }
@@ -135,7 +136,7 @@ const ModelSelectorWindow = () => {
         localStorage.setItem('cached-current-model', modelId);
         // @ts-ignore - this will set model + close window
         window.electronAPI?.invoke('set-model', modelId)
-            .catch((err: any) => console.error("Failed to set model:", err));
+            .catch((err: any) => log.error("Failed to set model:", err));
     };
 
     return (

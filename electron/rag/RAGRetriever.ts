@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import { VectorStore, ScoredChunk } from './VectorStore';
 import { EmbeddingPipeline } from './EmbeddingPipeline';
 import { formatChunkForContext } from './SemanticChunker';
@@ -71,7 +72,7 @@ export class RAGRetriever {
         try {
             queryEmbedding = await this.embeddingPipeline.getEmbedding(query);
         } catch (error) {
-            console.error('[RAGRetriever] Failed to embed query:', error);
+            log.error('[RAGRetriever] Failed to embed query:', error);
             // Return empty context on embedding failure
             return {
                 chunks: [],
@@ -90,7 +91,7 @@ export class RAGRetriever {
         });
 
         if (candidates.length === 0) {
-            console.log('[RAGRetriever] No similar chunks found');
+            log.info('[RAGRetriever] No similar chunks found');
             return {
                 chunks: [],
                 formattedContext: '',
@@ -166,7 +167,7 @@ export class RAGRetriever {
         try {
             queryEmbedding = await this.embeddingPipeline.getEmbedding(query);
         } catch (error) {
-            console.error('[RAGRetriever] Failed to embed query:', error);
+            log.error('[RAGRetriever] Failed to embed query:', error);
             return {
                 chunks: [],
                 formattedContext: '',
@@ -351,3 +352,4 @@ export class RAGRetriever {
         return currentMeetingId ? 'meeting' : 'global';
     }
 }
+

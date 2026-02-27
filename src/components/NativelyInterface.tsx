@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
     Sparkles,
@@ -122,7 +123,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({ onEndMeeting }) =
                         window.electronAPI.invoke('set-model', result.model).catch(() => { });
                     }
                 })
-                .catch((err: any) => console.error("Failed to fetch default model:", err));
+                .catch((err: any) => log.error("Failed to fetch default model:", err));
         }
     }, []);
 
@@ -130,7 +131,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({ onEndMeeting }) =
         setCurrentModel(modelId);
         // Session-only: update runtime but don't persist as default
         window.electronAPI.invoke('set-model', modelId)
-            .catch((err: any) => console.error("Failed to set model:", err));
+            .catch((err: any) => log.error("Failed to set model:", err));
     };
 
     // Listen for default model changes from Settings
@@ -174,7 +175,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({ onEndMeeting }) =
 
                 // Send exact dimensions to Electron
                 // Removed buffer to ensure tight fit
-                console.log('[NativelyInterface] ResizeObserver:', Math.ceil(rect.width), Math.ceil(rect.height));
+                log.info('[NativelyInterface] ResizeObserver:', Math.ceil(rect.width), Math.ceil(rect.height));
                 window.electronAPI?.updateContentDimensions({
                     width: Math.ceil(rect.width),
                     height: Math.ceil(rect.height)
@@ -251,7 +252,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({ onEndMeeting }) =
     useEffect(() => {
         if (!window.electronAPI?.onSessionReset) return;
         const unsubscribe = window.electronAPI.onSessionReset(() => {
-            console.log('[NativelyInterface] Resetting session state...');
+            log.info('[NativelyInterface] Resetting session state...');
             setMessages([]);
             setInputValue('');
             setAttachedContext(null);
@@ -1289,7 +1290,7 @@ Provide only the answer, nothing else.`;
     // So we MUST listen for them here.
 
     const generalHandlersRef = useRef({
-        toggleVisibility: () => window.electronAPI.toggleWindow(),
+        toggleVisibility: () => {}, // Handled by KeybindManager in main process
         processScreenshots: handleWhatToSay,
         resetCancel: async () => {
             if (isProcessing) {
@@ -1308,7 +1309,7 @@ Provide only the answer, nothing else.`;
                     handleScreenshotAttach(data as { path: string; preview: string });
                 }
             } catch (err) {
-                console.error("Error triggering screenshot:", err);
+                log.error("Error triggering screenshot:", err);
             }
         },
         selectiveScreenshot: async () => {
@@ -1318,14 +1319,14 @@ Provide only the answer, nothing else.`;
                     handleScreenshotAttach(data as { path: string; preview: string });
                 }
             } catch (err) {
-                console.error("Error triggering selective screenshot:", err);
+                log.error("Error triggering selective screenshot:", err);
             }
         }
     });
 
     // Update ref
     generalHandlersRef.current = {
-        toggleVisibility: () => window.electronAPI.toggleWindow(),
+        toggleVisibility: () => {}, // Handled by KeybindManager in main process
         processScreenshots: handleWhatToSay,
         resetCancel: async () => {
             if (isProcessing) {
@@ -1344,7 +1345,7 @@ Provide only the answer, nothing else.`;
                     handleScreenshotAttach(data as { path: string; preview: string });
                 }
             } catch (err) {
-                console.error("Error triggering screenshot:", err);
+                log.error("Error triggering screenshot:", err);
             }
         },
         selectiveScreenshot: async () => {
@@ -1354,7 +1355,7 @@ Provide only the answer, nothing else.`;
                     handleScreenshotAttach(data as { path: string; preview: string });
                 }
             } catch (err) {
-                console.error("Error triggering selective screenshot:", err);
+                log.error("Error triggering selective screenshot:", err);
             }
         }
     };

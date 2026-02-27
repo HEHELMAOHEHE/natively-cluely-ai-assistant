@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect } from 'react';
 
 interface SuggestionOverlayProps {
@@ -35,14 +36,14 @@ export const SuggestionOverlay: React.FC<SuggestionOverlayProps> = ({ className 
         cleanups.push(
             window.electronAPI.onNativeAudioConnected(() => {
                 setIsConnected(true);
-                console.log('[SuggestionOverlay] Native audio connected');
+                log.info('[SuggestionOverlay] Native audio connected');
             })
         );
 
         cleanups.push(
             window.electronAPI.onNativeAudioDisconnected(() => {
                 setIsConnected(false);
-                console.log('[SuggestionOverlay] Native audio disconnected');
+                log.info('[SuggestionOverlay] Native audio disconnected');
             })
         );
 

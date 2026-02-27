@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Copy, Check, Globe, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -70,7 +71,7 @@ const AssistantMessage: React.FC<{ content: string; isStreaming?: boolean }> = (
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
-            console.error('Failed to copy:', err);
+            log.error('Failed to copy:', err);
         }
     };
 
@@ -221,7 +222,7 @@ const GlobalChatOverlay: React.FC<GlobalChatOverlayProps> = ({
             });
 
             const errorCleanup = window.electronAPI?.onRAGStreamError((data: { error: string }) => {
-                console.error('[GlobalChat] RAG stream error:', data.error);
+                log.error('[GlobalChat] RAG stream error:', data.error);
                 setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
                 setErrorMessage("Couldn't get a response. Please try again.");
                 setChatState('error');
@@ -234,7 +235,7 @@ const GlobalChatOverlay: React.FC<GlobalChatOverlayProps> = ({
             const result = await window.electronAPI?.ragQueryGlobal(question);
 
             if (result?.fallback) {
-                console.log("[GlobalChat] RAG unavailable, falling back to standard chat");
+                log.info("[GlobalChat] RAG unavailable, falling back to standard chat");
                 // Cleanup RAG listeners
                 tokenCleanup?.();
                 doneCleanup?.();
@@ -263,7 +264,7 @@ const GlobalChatOverlay: React.FC<GlobalChatOverlayProps> = ({
                 });
 
                 const oldErrorCleanup = window.electronAPI?.onGeminiStreamError((error: string) => {
-                    console.error('[GlobalChat] Gemini stream error:', error);
+                    log.error('[GlobalChat] Gemini stream error:', error);
                     setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
                     setErrorMessage("Couldn't get a response. Please check your settings.");
                     setChatState('error');
@@ -277,7 +278,7 @@ const GlobalChatOverlay: React.FC<GlobalChatOverlayProps> = ({
             }
 
         } catch (error) {
-            console.error('[GlobalChat] Error:', error);
+            log.error('[GlobalChat] Error:', error);
             setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
             setErrorMessage("Something went wrong. Please try again.");
             setChatState('error');

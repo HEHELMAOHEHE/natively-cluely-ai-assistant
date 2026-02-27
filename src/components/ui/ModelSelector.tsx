@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Check, Cloud, Terminal, Monitor, Server, Plus } from 'lucide-react';
 
@@ -44,7 +45,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onSe
                 const local = await window.electronAPI?.invoke('get-available-ollama-models') as string[];
                 if (local) setOllamaModels(local);
             } catch (e) {
-                console.error("Failed to load models:", e);
+                log.error("Failed to load models:", e);
             }
         };
         loadData();

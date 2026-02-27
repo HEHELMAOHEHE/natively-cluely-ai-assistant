@@ -1,3 +1,4 @@
+import { log } from './utils/logger';
 import Store from 'electron-store';
 import crypto from 'crypto';
 
@@ -73,10 +74,11 @@ export class DonationManager {
             lastShownAt: Date.now(),
             lifetimeShows: state.lifetimeShows + 1
         });
-        console.log('[DonationManager] Toaster shown. Count:', state.lifetimeShows + 1);
+        log.info('[DonationManager] Toaster shown. Count:', state.lifetimeShows + 1);
     }
 
     public setHasDonated(status: boolean): void {
         this.store.set('hasDonated', status);
     }
 }
+

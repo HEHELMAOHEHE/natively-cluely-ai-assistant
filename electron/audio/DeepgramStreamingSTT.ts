@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 /**
  * DeepgramStreamingSTT - WebSocket-based streaming Speech-to-Text using Deepgram Nova-2
  *
@@ -40,12 +41,12 @@ export class DeepgramStreamingSTT extends EventEmitter {
 
     public setSampleRate(rate: number): void {
         this.sampleRate = rate;
-        console.log(`[DeepgramStreaming] Sample rate set to ${rate}`);
+        log.info(`[DeepgramStreaming] Sample rate set to ${rate}`);
     }
 
     public setAudioChannelCount(count: number): void {
         this.numChannels = count;
-        console.log(`[DeepgramStreaming] Channel count set to ${count}`);
+        log.info(`[DeepgramStreaming] Channel count set to ${count}`);
     }
 
     /** No-op — Deepgram language is auto-detected or set via query param */
@@ -83,7 +84,7 @@ export class DeepgramStreamingSTT extends EventEmitter {
         }
 
         this.isActive = false;
-        console.log('[DeepgramStreaming] Stopped');
+        log.info('[DeepgramStreaming] Stopped');
     }
 
     // =========================================================================
@@ -116,7 +117,7 @@ export class DeepgramStreamingSTT extends EventEmitter {
             `&smart_format=true` +
             `&interim_results=true`;
 
-        console.log(`[DeepgramStreaming] Connecting (rate=${this.sampleRate}, ch=${this.numChannels})...`);
+        log.info(`[DeepgramStreaming] Connecting (rate=${this.sampleRate}, ch=${this.numChannels})...`);
 
         this.ws = new WebSocket(url, {
             headers: {
@@ -127,7 +128,7 @@ export class DeepgramStreamingSTT extends EventEmitter {
         this.ws.on('open', () => {
             this.isActive = true;
             this.reconnectAttempts = 0;
-            console.log('[DeepgramStreaming] Connected');
+            log.info('[DeepgramStreaming] Connected');
 
             // Start keep-alive pings
             this.startKeepAlive();
@@ -150,19 +151,19 @@ export class DeepgramStreamingSTT extends EventEmitter {
                     confidence: msg.channel?.alternatives?.[0]?.confidence ?? 1.0,
                 });
             } catch (err) {
-                console.error('[DeepgramStreaming] Parse error:', err);
+                log.error('[DeepgramStreaming] Parse error:', err);
             }
         });
 
         this.ws.on('error', (err: Error) => {
-            console.error('[DeepgramStreaming] WebSocket error:', err.message);
+            log.error('[DeepgramStreaming] WebSocket error:', err.message);
             this.emit('error', err);
         });
 
         this.ws.on('close', (code: number, reason: Buffer) => {
             this.isActive = false;
             this.clearKeepAlive();
-            console.log(`[DeepgramStreaming] Closed (code=${code}, reason=${reason.toString()})`);
+            log.info(`[DeepgramStreaming] Closed (code=${code}, reason=${reason.toString()})`);
 
             // Auto-reconnect on unexpected close
             if (this.shouldReconnect && code !== 1000) {
@@ -184,7 +185,7 @@ export class DeepgramStreamingSTT extends EventEmitter {
         );
         this.reconnectAttempts++;
 
-        console.log(`[DeepgramStreaming] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})...`);
+        log.info(`[DeepgramStreaming] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})...`);
 
         this.reconnectTimer = setTimeout(() => {
             if (this.shouldReconnect) {
@@ -226,3 +227,4 @@ export class DeepgramStreamingSTT extends EventEmitter {
         }
     }
 }
+

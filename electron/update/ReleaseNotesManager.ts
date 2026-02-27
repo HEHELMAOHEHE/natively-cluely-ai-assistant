@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 
 import { net } from "electron";
 
@@ -31,11 +32,11 @@ export class ReleaseNotesManager {
 
     public async fetchReleaseNotes(version: string, forceRefresh = false): Promise<ParsedReleaseNotes | null> {
         if (!forceRefresh && this.cachedNotes && this.cachedNotes.version === version) {
-            console.log("[ReleaseNotesManager] Returning cached release notes for", version);
+            log.info("[ReleaseNotesManager] Returning cached release notes for", version);
             return this.cachedNotes;
         }
 
-        console.log(`[ReleaseNotesManager] Fetching release notes for ${version}...`);
+        log.info(`[ReleaseNotesManager] Fetching release notes for ${version}...`);
 
         try {
             // We'll fetch the 'latest' release and check if it matches the version we are updating to.
@@ -57,7 +58,7 @@ export class ReleaseNotesManager {
             const response = await this.makeRequest(url);
 
             if (!response) {
-                console.warn("[ReleaseNotesManager] Failed to fetch release notes from API.");
+                log.warn("[ReleaseNotesManager] Failed to fetch release notes from API.");
                 return null;
             }
 
@@ -71,13 +72,13 @@ export class ReleaseNotesManager {
             return parsed;
 
         } catch (error) {
-            console.error("[ReleaseNotesManager] Error fetching release notes:", error);
+            log.error("[ReleaseNotesManager] Error fetching release notes:", error);
             return null;
         }
     }
 
     private parseReleaseNotes(body: string, version: string, url: string): ParsedReleaseNotes {
-        console.log(`[ReleaseNotesManager] Parsing body for ${version}. Length: ${body.length}`);
+        log.info(`[ReleaseNotesManager] Parsing body for ${version}. Length: ${body.length}`);
         const allowedHeaders = ['Summary', "What's New", "Improvements", "Fixes", "Technical"];
         const bulletSections = ["What's New", "Improvements", "Fixes", "Technical"];
 
@@ -108,7 +109,7 @@ export class ReleaseNotesManager {
             if (title === 'Summary') {
                 // Summary: Capture text content (single line description)
                 summary = content.replace(/\n/g, ' ').trim();
-                console.log(`[ReleaseNotesManager] Found Summary: "${summary.substring(0, 50)}..."`);
+                log.info(`[ReleaseNotesManager] Found Summary: "${summary.substring(0, 50)}..."`);
             } else if (bulletSections.includes(title)) {
                 // Bullet Sections: Capture ONLY lines starting with - or *
                 const items: string[] = [];
@@ -121,9 +122,9 @@ export class ReleaseNotesManager {
 
                 if (items.length > 0) {
                     sections.push({ title, items });
-                    console.log(`[ReleaseNotesManager] Found Section: "${title}" (${items.length} items)`);
+                    log.info(`[ReleaseNotesManager] Found Section: "${title}" (${items.length} items)`);
                 } else {
-                    console.warn(`[ReleaseNotesManager] Section "${title}" found but no valid bullet points extracted.`);
+                    log.warn(`[ReleaseNotesManager] Section "${title}" found but no valid bullet points extracted.`);
                 }
             }
         }
@@ -143,7 +144,7 @@ export class ReleaseNotesManager {
 
             request.on('response', (response) => {
                 if (response.statusCode !== 200) {
-                    console.warn(`[ReleaseNotesManager] HTTP ${response.statusCode} for ${url}`);
+                    log.warn(`[ReleaseNotesManager] HTTP ${response.statusCode} for ${url}`);
                     resolve(null);
                     return;
                 }
@@ -158,13 +159,13 @@ export class ReleaseNotesManager {
                 });
 
                 response.on('error', (err) => {
-                    console.error("[ReleaseNotesManager] Stream error:", err);
+                    log.error("[ReleaseNotesManager] Stream error:", err);
                     resolve(null);
                 });
             });
 
             request.on('error', (err) => {
-                console.error("[ReleaseNotesManager] Request error:", err);
+                log.error("[ReleaseNotesManager] Request error:", err);
                 resolve(null);
             });
 
@@ -176,3 +177,4 @@ export class ReleaseNotesManager {
         return this.cachedNotes;
     }
 }
+

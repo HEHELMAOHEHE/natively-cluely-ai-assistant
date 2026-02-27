@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Loader, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -38,7 +39,7 @@ const ConnectCalendarButton: React.FC<ConnectCalendarButtonProps> = ({ className
                 });
             }
         } catch (err) {
-            console.error(err);
+            log.error(err);
         } finally {
             setLoading(false);
         }

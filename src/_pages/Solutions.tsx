@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 // Solutions.tsx
 import React, { useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "react-query"
@@ -167,7 +168,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         const existing = await window.electronAPI.getScreenshots()
         return existing
       } catch (error) {
-        console.error("Error loading extra screenshots:", error)
+        log.error("Error loading extra screenshots:", error)
         return []
       }
     },
@@ -197,10 +198,10 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
       if (response.success) {
         refetch() // Refetch screenshots instead of managing state directly
       } else {
-        console.error("Failed to delete extra screenshot:", response.error)
+        log.error("Failed to delete extra screenshot:", response.error)
       }
     } catch (error) {
-      console.error("Error deleting extra screenshot:", error)
+      log.error("Error deleting extra screenshot:", error)
     }
   }
 
@@ -257,7 +258,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
 
         // LEGACY: Audio recording is now handled by native audio service continuously
         // The native service sends transcripts via WebSocket, not via this handler
-        console.log('[Solutions] onSolutionStart: Audio is now handled by native audio service')
+        log.info('[Solutions] onSolutionStart: Audio is now handled by native audio service')
 
         // Simulate receiving custom content shortly after start
         setTimeout(() => {
@@ -287,16 +288,16 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         setThoughtsData(solution?.thoughts || null)
         setTimeComplexityData(solution?.time_complexity || null)
         setSpaceComplexityData(solution?.space_complexity || null)
-        console.error("Processing error:", error)
+        log.error("Processing error:", error)
       }),
       //when the initial solution is generated, we'll set the solution data to that
       window.electronAPI.onSolutionSuccess((data) => {
         if (!data?.solution) {
-          console.warn("Received empty or invalid solution data")
+          log.warn("Received empty or invalid solution data")
           return
         }
 
-        console.log({ solution: data.solution })
+        log.info({ solution: data.solution })
 
         const solutionData = {
           code: data.solution.code,
@@ -321,7 +322,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
       }),
       //the first time debugging works, we'll set the view to debug and populate the cache with the data
       window.electronAPI.onDebugSuccess((data) => {
-        console.log({ debug_data: data })
+        log.info({ debug_data: data })
 
         queryClient.setQueryData(["new_solution"], data.solution)
         setDebugProcessing(false)

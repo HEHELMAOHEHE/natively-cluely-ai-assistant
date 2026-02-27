@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect } from 'react';
 import { Info, Monitor, Globe } from 'lucide-react';
 
@@ -22,7 +23,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = () => {
                     setServiceAccountPath(creds.googleServiceAccountPath);
                 }
             } catch (e) {
-                console.error("Failed to load stored credentials:", e);
+                log.error("Failed to load stored credentials:", e);
             }
 
             // Load Languages
@@ -101,7 +102,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = () => {
                 setServiceAccountPath(result.path);
             }
         } catch (error) {
-            console.error("Failed to select service account:", error);
+            log.error("Failed to select service account:", error);
         }
     };
 

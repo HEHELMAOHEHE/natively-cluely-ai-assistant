@@ -1,3 +1,4 @@
+import { log } from '@utils/logger';
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, AlertCircle, CheckCircle, Save, ChevronDown, Check, RefreshCw, ExternalLink, Loader2 } from 'lucide-react';
 import { validateCurl } from '../../lib/curl-validator';
@@ -143,7 +144,7 @@ export const AIProvidersSettings: React.FC = () => {
                 checkOllama();
 
             } catch (e) {
-                console.error("Failed to load settings:", e);
+                log.error("Failed to load settings:", e);
             }
         };
         loadCredentials();
@@ -183,7 +184,7 @@ export const AIProvidersSettings: React.FC = () => {
                 setOllamaStatus('not-found');
             }
         } catch (e) {
-            console.warn("Ollama ensure startup failed:", e);
+            log.warn("Ollama ensure startup failed:", e);
             setOllamaStatus('not-found');
         }
     };
@@ -206,7 +207,7 @@ export const AIProvidersSettings: React.FC = () => {
                 }
             }
         } catch (e) {
-            // console.warn(`Ollama check failed:`, e);
+            // log.warn(`Ollama check failed:`, e);
             if (ollamaStatus !== 'detected') {
                 setOllamaStatus('not-found');
             }
@@ -226,7 +227,7 @@ export const AIProvidersSettings: React.FC = () => {
                 setOllamaStatus('not-found');
             }
         } catch (e) {
-            console.error("Fix failed", e);
+            log.error("Fix failed", e);
             setOllamaStatus('not-found');
         }
     };
@@ -252,7 +253,7 @@ export const AIProvidersSettings: React.FC = () => {
                 setTimeout(() => setSavedStatus(prev => ({ ...prev, [provider]: false })), 2000);
             }
         } catch (e) {
-            console.error(`Failed to save ${provider} key:`, e);
+            log.error(`Failed to save ${provider} key:`, e);
         } finally {
             setSavingStatus(prev => ({ ...prev, [provider]: false }));
         }
@@ -276,7 +277,7 @@ export const AIProvidersSettings: React.FC = () => {
                 setter('');
             }
         } catch (e) {
-            console.error(`Failed to remove ${provider} key:`, e);
+            log.error(`Failed to remove ${provider} key:`, e);
         }
     };
 
@@ -384,7 +385,7 @@ export const AIProvidersSettings: React.FC = () => {
                 setCustomProviders(updated);
             }
         } catch (e) {
-            console.error("Failed to delete provider:", e);
+            log.error("Failed to delete provider:", e);
         }
     };
 
@@ -415,7 +416,7 @@ export const AIProvidersSettings: React.FC = () => {
                         onChange={(val) => {
                             setDefaultModel(val);
                             // @ts-ignore - persist as default + update runtime + broadcast
-                            window.electronAPI?.invoke('set-default-model', val).catch(console.error);
+                            window.electronAPI?.invoke('set-default-model', val).catch(log.error);
                         }}
                     />
                 </div>
